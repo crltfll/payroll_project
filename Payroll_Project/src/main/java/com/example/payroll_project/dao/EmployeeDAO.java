@@ -1,7 +1,7 @@
 package com.example.payroll_project.dao;
 
-import com.payroll.model.Employee;
-import com.payroll.util.DatabaseManager;
+import com.example.payroll_project.model.Employee;
+import com.example.payroll_project.util.DatabaseManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

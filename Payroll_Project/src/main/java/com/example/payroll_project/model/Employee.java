@@ -109,7 +109,6 @@ public class Employee {
     public Integer getEmployeeId() {
         return employeeId;
     }
-    
     public void setEmployeeId(Integer employeeId) {
         this.employeeId = employeeId;
     }
@@ -117,7 +116,6 @@ public class Employee {
     public String getEmployeeCode() {
         return employeeCode;
     }
-    
     public void setEmployeeCode(String employeeCode) {
         this.employeeCode = employeeCode;
     }
@@ -125,7 +123,6 @@ public class Employee {
     public String getFirstName() {
         return firstName;
     }
-    
     public void setFirstName(String firstName) {
         this.firstName = firstName;
     }
@@ -133,7 +130,6 @@ public class Employee {
     public String getMiddleName() {
         return middleName;
     }
-    
     public void setMiddleName(String middleName) {
         this.middleName = middleName;
     }
@@ -141,7 +137,6 @@ public class Employee {
     public String getLastName() {
         return lastName;
     }
-    
     public void setLastName(String lastName) {
         this.lastName = lastName;
     }
@@ -149,7 +144,6 @@ public class Employee {
     public String getEmail() {
         return email;
     }
-    
     public void setEmail(String email) {
         this.email = email;
     }
@@ -157,7 +151,6 @@ public class Employee {
     public String getPhoneNumber() {
         return phoneNumber;
     }
-    
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
     }
@@ -165,7 +158,6 @@ public class Employee {
     public String getAddress() {
         return address;
     }
-    
     public void setAddress(String address) {
         this.address = address;
     }
@@ -173,7 +165,6 @@ public class Employee {
     public EmploymentType getEmploymentType() {
         return employmentType;
     }
-    
     public void setEmploymentType(EmploymentType employmentType) {
         this.employmentType = employmentType;
     }
@@ -181,7 +172,6 @@ public class Employee {
     public String getPosition() {
         return position;
     }
-    
     public void setPosition(String position) {
         this.position = position;
     }
@@ -189,7 +179,6 @@ public class Employee {
     public String getDepartment() {
         return department;
     }
-    
     public void setDepartment(String department) {
         this.department = department;
     }
@@ -197,7 +186,6 @@ public class Employee {
     public LocalDate getDateHired() {
         return dateHired;
     }
-    
     public void setDateHired(LocalDate dateHired) {
         this.dateHired = dateHired;
     }
@@ -205,15 +193,11 @@ public class Employee {
     public LocalDate getDateSeparated() {
         return dateSeparated;
     }
-    
     public void setDateSeparated(LocalDate dateSeparated) {
         this.dateSeparated = dateSeparated;
     }
     
-    public BigDecimal getBaseRate() {
-        return baseRate;
-    }
-    
+    public BigDecimal getBaseRate() {return baseRate;}
     public void setBaseRate(BigDecimal baseRate) {
         this.baseRate = baseRate;
     }
@@ -221,7 +205,6 @@ public class Employee {
     public RateType getRateType() {
         return rateType;
     }
-    
     public void setRateType(RateType rateType) {
         this.rateType = rateType;
     }
@@ -229,39 +212,34 @@ public class Employee {
     public String getSssNumber() {
         return sssNumber;
     }
-    
     public void setSssNumber(String sssNumber) {
         this.sssNumber = sssNumber;
     }
-    
+
     public String getPhilhealthNumber() {
         return philhealthNumber;
     }
-    
     public void setPhilhealthNumber(String philhealthNumber) {
         this.philhealthNumber = philhealthNumber;
     }
-    
+
     public String getPagibigNumber() {
         return pagibigNumber;
     }
-    
     public void setPagibigNumber(String pagibigNumber) {
         this.pagibigNumber = pagibigNumber;
     }
-    
+
     public String getTin() {
         return tin;
     }
-    
     public void setTin(String tin) {
         this.tin = tin;
     }
-    
+
     public boolean isActive() {
         return active;
     }
-    
     public void setActive(boolean active) {
         this.active = active;
     }
@@ -269,7 +247,6 @@ public class Employee {
     public Integer getCreatedBy() {
         return createdBy;
     }
-    
     public void setCreatedBy(Integer createdBy) {
         this.createdBy = createdBy;
     }
@@ -277,7 +254,6 @@ public class Employee {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
-    
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
@@ -285,7 +261,6 @@ public class Employee {
     public Integer getUpdatedBy() {
         return updatedBy;
     }
-    
     public void setUpdatedBy(Integer updatedBy) {
         this.updatedBy = updatedBy;
     }
@@ -293,7 +268,6 @@ public class Employee {
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
-    
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }

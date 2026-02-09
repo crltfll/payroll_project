@@ -81,7 +81,6 @@ public class PayPeriod {
     public Integer getPayPeriodId() {
         return payPeriodId;
     }
-    
     public void setPayPeriodId(Integer payPeriodId) {
         this.payPeriodId = payPeriodId;
     }
@@ -89,7 +88,6 @@ public class PayPeriod {
     public String getPeriodName() {
         return periodName;
     }
-    
     public void setPeriodName(String periodName) {
         this.periodName = periodName;
     }
@@ -97,7 +95,6 @@ public class PayPeriod {
     public LocalDate getStartDate() {
         return startDate;
     }
-    
     public void setStartDate(LocalDate startDate) {
         this.startDate = startDate;
     }
@@ -105,7 +102,6 @@ public class PayPeriod {
     public LocalDate getEndDate() {
         return endDate;
     }
-    
     public void setEndDate(LocalDate endDate) {
         this.endDate = endDate;
     }
@@ -113,7 +109,6 @@ public class PayPeriod {
     public LocalDate getPayDate() {
         return payDate;
     }
-    
     public void setPayDate(LocalDate payDate) {
         this.payDate = payDate;
     }
@@ -121,7 +116,6 @@ public class PayPeriod {
     public Status getStatus() {
         return status;
     }
-    
     public void setStatus(Status status) {
         this.status = status;
     }
@@ -129,7 +123,6 @@ public class PayPeriod {
     public boolean isLocked() {
         return locked;
     }
-    
     public void setLocked(boolean locked) {
         this.locked = locked;
     }
@@ -137,7 +130,6 @@ public class PayPeriod {
     public Integer getCreatedBy() {
         return createdBy;
     }
-    
     public void setCreatedBy(Integer createdBy) {
         this.createdBy = createdBy;
     }
@@ -145,7 +137,6 @@ public class PayPeriod {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
-    
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
@@ -153,7 +144,6 @@ public class PayPeriod {
     public Integer getFinalizedBy() {
         return finalizedBy;
     }
-    
     public void setFinalizedBy(Integer finalizedBy) {
         this.finalizedBy = finalizedBy;
     }
@@ -161,7 +151,6 @@ public class PayPeriod {
     public LocalDateTime getFinalizedAt() {
         return finalizedAt;
     }
-    
     public void setFinalizedAt(LocalDateTime finalizedAt) {
         this.finalizedAt = finalizedAt;
     }

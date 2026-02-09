@@ -174,7 +174,6 @@ public class PayrollRecord {
     public Integer getPayrollId() {
         return payrollId;
     }
-    
     public void setPayrollId(Integer payrollId) {
         this.payrollId = payrollId;
     }
@@ -182,7 +181,6 @@ public class PayrollRecord {
     public Integer getPayPeriodId() {
         return payPeriodId;
     }
-    
     public void setPayPeriodId(Integer payPeriodId) {
         this.payPeriodId = payPeriodId;
     }
@@ -190,7 +188,6 @@ public class PayrollRecord {
     public Integer getEmployeeId() {
         return employeeId;
     }
-    
     public void setEmployeeId(Integer employeeId) {
         this.employeeId = employeeId;
     }
@@ -198,7 +195,6 @@ public class PayrollRecord {
     public BigDecimal getTotalRegularHours() {
         return totalRegularHours;
     }
-    
     public void setTotalRegularHours(BigDecimal totalRegularHours) {
         this.totalRegularHours = totalRegularHours;
     }
@@ -206,7 +202,6 @@ public class PayrollRecord {
     public BigDecimal getTotalOvertimeHours() {
         return totalOvertimeHours;
     }
-    
     public void setTotalOvertimeHours(BigDecimal totalOvertimeHours) {
         this.totalOvertimeHours = totalOvertimeHours;
     }
@@ -214,7 +209,6 @@ public class PayrollRecord {
     public BigDecimal getTotalNightDiffHours() {
         return totalNightDiffHours;
     }
-    
     public void setTotalNightDiffHours(BigDecimal totalNightDiffHours) {
         this.totalNightDiffHours = totalNightDiffHours;
     }
@@ -222,7 +216,6 @@ public class PayrollRecord {
     public BigDecimal getTotalHolidayHours() {
         return totalHolidayHours;
     }
-    
     public void setTotalHolidayHours(BigDecimal totalHolidayHours) {
         this.totalHolidayHours = totalHolidayHours;
     }
@@ -230,7 +223,6 @@ public class PayrollRecord {
     public BigDecimal getTotalRestDayHours() {
         return totalRestDayHours;
     }
-    
     public void setTotalRestDayHours(BigDecimal totalRestDayHours) {
         this.totalRestDayHours = totalRestDayHours;
     }
@@ -238,7 +230,6 @@ public class PayrollRecord {
     public Integer getDaysWorked() {
         return daysWorked;
     }
-    
     public void setDaysWorked(Integer daysWorked) {
         this.daysWorked = daysWorked;
     }
@@ -246,7 +237,6 @@ public class PayrollRecord {
     public Integer getDaysAbsent() {
         return daysAbsent;
     }
-    
     public void setDaysAbsent(Integer daysAbsent) {
         this.daysAbsent = daysAbsent;
     }
@@ -254,7 +244,6 @@ public class PayrollRecord {
     public Integer getTotalLateMinutes() {
         return totalLateMinutes;
     }
-    
     public void setTotalLateMinutes(Integer totalLateMinutes) {
         this.totalLateMinutes = totalLateMinutes;
     }
@@ -262,7 +251,6 @@ public class PayrollRecord {
     public Integer getTotalUndertimeMinutes() {
         return totalUndertimeMinutes;
     }
-    
     public void setTotalUndertimeMinutes(Integer totalUndertimeMinutes) {
         this.totalUndertimeMinutes = totalUndertimeMinutes;
     }
@@ -270,7 +258,6 @@ public class PayrollRecord {
     public BigDecimal getBasicPay() {
         return basicPay;
     }
-    
     public void setBasicPay(BigDecimal basicPay) {
         this.basicPay = basicPay;
     }
@@ -278,7 +265,6 @@ public class PayrollRecord {
     public BigDecimal getOvertimePay() {
         return overtimePay;
     }
-    
     public void setOvertimePay(BigDecimal overtimePay) {
         this.overtimePay = overtimePay;
     }
@@ -286,7 +272,6 @@ public class PayrollRecord {
     public BigDecimal getNightDiffPay() {
         return nightDiffPay;
     }
-    
     public void setNightDiffPay(BigDecimal nightDiffPay) {
         this.nightDiffPay = nightDiffPay;
     }
@@ -294,7 +279,6 @@ public class PayrollRecord {
     public BigDecimal getHolidayPay() {
         return holidayPay;
     }
-    
     public void setHolidayPay(BigDecimal holidayPay) {
         this.holidayPay = holidayPay;
     }
@@ -302,7 +286,6 @@ public class PayrollRecord {
     public BigDecimal getTotalAllowances() {
         return totalAllowances;
     }
-    
     public void setTotalAllowances(BigDecimal totalAllowances) {
         this.totalAllowances = totalAllowances;
     }
@@ -310,7 +293,6 @@ public class PayrollRecord {
     public BigDecimal getTaxableAllowances() {
         return taxableAllowances;
     }
-    
     public void setTaxableAllowances(BigDecimal taxableAllowances) {
         this.taxableAllowances = taxableAllowances;
     }
@@ -318,7 +300,6 @@ public class PayrollRecord {
     public BigDecimal getNonTaxableAllowances() {
         return nonTaxableAllowances;
     }
-    
     public void setNonTaxableAllowances(BigDecimal nonTaxableAllowances) {
         this.nonTaxableAllowances = nonTaxableAllowances;
     }
@@ -326,7 +307,6 @@ public class PayrollRecord {
     public BigDecimal getGrossPay() {
         return grossPay;
     }
-    
     public void setGrossPay(BigDecimal grossPay) {
         this.grossPay = grossPay;
     }
@@ -334,7 +314,6 @@ public class PayrollRecord {
     public BigDecimal getSssContribution() {
         return sssContribution;
     }
-    
     public void setSssContribution(BigDecimal sssContribution) {
         this.sssContribution = sssContribution;
     }
@@ -342,7 +321,6 @@ public class PayrollRecord {
     public BigDecimal getPhilhealthContribution() {
         return philhealthContribution;
     }
-    
     public void setPhilhealthContribution(BigDecimal philhealthContribution) {
         this.philhealthContribution = philhealthContribution;
     }
@@ -350,7 +328,6 @@ public class PayrollRecord {
     public BigDecimal getPagibigContribution() {
         return pagibigContribution;
     }
-    
     public void setPagibigContribution(BigDecimal pagibigContribution) {
         this.pagibigContribution = pagibigContribution;
     }
@@ -358,7 +335,6 @@ public class PayrollRecord {
     public BigDecimal getWithholdingTax() {
         return withholdingTax;
     }
-    
     public void setWithholdingTax(BigDecimal withholdingTax) {
         this.withholdingTax = withholdingTax;
     }
@@ -366,7 +342,6 @@ public class PayrollRecord {
     public BigDecimal getTotalOtherDeductions() {
         return totalOtherDeductions;
     }
-    
     public void setTotalOtherDeductions(BigDecimal totalOtherDeductions) {
         this.totalOtherDeductions = totalOtherDeductions;
     }
@@ -374,7 +349,6 @@ public class PayrollRecord {
     public BigDecimal getTotalDeductions() {
         return totalDeductions;
     }
-    
     public void setTotalDeductions(BigDecimal totalDeductions) {
         this.totalDeductions = totalDeductions;
     }
@@ -382,7 +356,6 @@ public class PayrollRecord {
     public BigDecimal getNetPay() {
         return netPay;
     }
-    
     public void setNetPay(BigDecimal netPay) {
         this.netPay = netPay;
     }
@@ -390,7 +363,6 @@ public class PayrollRecord {
     public String getComputationDetails() {
         return computationDetails;
     }
-    
     public void setComputationDetails(String computationDetails) {
         this.computationDetails = computationDetails;
     }
@@ -398,7 +370,6 @@ public class PayrollRecord {
     public boolean isFinalized() {
         return finalized;
     }
-    
     public void setFinalized(boolean finalized) {
         this.finalized = finalized;
     }
@@ -406,7 +377,6 @@ public class PayrollRecord {
     public boolean isPayslipGenerated() {
         return payslipGenerated;
     }
-    
     public void setPayslipGenerated(boolean payslipGenerated) {
         this.payslipGenerated = payslipGenerated;
     }
@@ -414,7 +384,6 @@ public class PayrollRecord {
     public String getPayslipPath() {
         return payslipPath;
     }
-    
     public void setPayslipPath(String payslipPath) {
         this.payslipPath = payslipPath;
     }
@@ -422,7 +391,6 @@ public class PayrollRecord {
     public Integer getCreatedBy() {
         return createdBy;
     }
-    
     public void setCreatedBy(Integer createdBy) {
         this.createdBy = createdBy;
     }
@@ -430,7 +398,6 @@ public class PayrollRecord {
     public LocalDateTime getCreatedAt() {
         return createdAt;
     }
-    
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
     }
@@ -438,7 +405,6 @@ public class PayrollRecord {
     public Integer getUpdatedBy() {
         return updatedBy;
     }
-    
     public void setUpdatedBy(Integer updatedBy) {
         this.updatedBy = updatedBy;
     }
@@ -446,7 +412,6 @@ public class PayrollRecord {
     public LocalDateTime getUpdatedAt() {
         return updatedAt;
     }
-    
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
     }
