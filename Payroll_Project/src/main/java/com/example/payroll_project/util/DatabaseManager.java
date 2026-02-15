@@ -13,8 +13,7 @@ import java.sql.*;
 
 /**
  * Database Manager (SEC2: Data Protection)
- * Manages SQLite database connections
- * Fixed for IntelliJ IDEA compatibility
+ * Manages SQLite database connections with improved path handling
  */
 public class DatabaseManager {
 
@@ -76,80 +75,81 @@ public class DatabaseManager {
     }
 
     /**
-     * Initialize database schema
-     * Works with both file system and classpath resources (IntelliJ compatible)
+     * Initialize database schema with improved path resolution
      */
     private void initializeSchema() throws SQLException {
         logger.info("Initializing database schema...");
 
-        // Try multiple locations for the schema file
+        String schema = loadSchemaFromMultipleSources();
+
+        if (schema != null && !schema.trim().isEmpty()) {
+            try {
+                executeSchemaScript(schema);
+                logger.info("Schema initialized successfully from file");
+                return;
+            } catch (SQLException e) {
+                logger.error("Failed to execute schema from file", e);
+            }
+        }
+
+        // Fallback to creating basic schema
+        logger.warn("Using fallback schema creation");
+        createBasicSchema();
+    }
+
+    /**
+     * Try to load schema from multiple possible locations
+     */
+    private String loadSchemaFromMultipleSources() {
+        // Try multiple paths in order
         String[] possiblePaths = {
-            "docs/database_schema.sql",           // Maven/command line
-            "../docs/database_schema.sql",        // IntelliJ relative
-            "Payroll_Project/docs/database_schema.sql", // From project root
+            "docs/database_schema.sql",
+            "../docs/database_schema.sql",
+            "Payroll_Project/docs/database_schema.sql",
+            "src/main/resources/database_schema.sql"
         };
 
-        String schema = null;
-        
-        // First, try to load from file system
+        // First try file system
         for (String path : possiblePaths) {
-            if (Files.exists(Paths.get(path))) {
-                try {
-                    schema = new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8);
+            try {
+                if (Files.exists(Paths.get(path))) {
+                    String content = new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8);
                     logger.info("Schema loaded from file: {}", path);
-                    break;
-                } catch (IOException e) {
-                    logger.warn("Failed to read schema from: {}", path);
-                }
-            }
-        }
-        
-        // If not found in file system, try classpath (if schema is in resources)
-        if (schema == null) {
-            try (InputStream is = getClass().getClassLoader().getResourceAsStream("database_schema.sql")) {
-                if (is != null) {
-                    schema = new String(is.readAllBytes(), StandardCharsets.UTF_8);
-                    logger.info("Schema loaded from classpath");
+                    return content;
                 }
             } catch (IOException e) {
-                logger.warn("Failed to read schema from classpath", e);
+                logger.debug("Could not read schema from: {}", path);
             }
         }
 
-        // If still not found, create basic schema
-        if (schema == null || schema.trim().isEmpty()) {
-            logger.warn("Schema file not found in any location. Creating basic schema manually.");
-            createBasicSchema();
-            return;
+        // Try classpath
+        try (InputStream is = getClass().getClassLoader().getResourceAsStream("database_schema.sql")) {
+            if (is != null) {
+                String content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                logger.info("Schema loaded from classpath");
+                return content;
+            }
+        } catch (IOException e) {
+            logger.debug("Could not read schema from classpath");
         }
 
-        try {
-            // Execute the schema
-            executeSchemaScript(schema);
-            logger.info("Schema initialized successfully");
-        } catch (SQLException e) {
-            logger.error("Failed to execute schema", e);
-            throw e;
-        }
+        return null;
     }
 
     /**
      * Execute SQL script from string
      */
     private void executeSchemaScript(String script) throws SQLException {
-        // Split by semicolon and execute each statement
         String[] statements = script.split(";");
 
         try (Statement stmt = connection.createStatement()) {
             for (String sql : statements) {
                 sql = sql.trim();
-                // Skip empty statements and comments
                 if (!sql.isEmpty() && !sql.startsWith("--")) {
                     try {
                         stmt.execute(sql);
                     } catch (SQLException e) {
-                        // Log but continue with other statements
-                        logger.warn("Failed to execute statement (continuing): {}", e.getMessage());
+                        logger.warn("Statement execution warning (continuing): {}", e.getMessage());
                     }
                 }
             }
@@ -177,7 +177,7 @@ public class DatabaseManager {
                 )
             """);
 
-            // Employees table (simplified)
+            // Employees table
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS employees (
                     employee_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -235,14 +235,11 @@ public class DatabaseManager {
                     updated_by INTEGER,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     FOREIGN KEY (employee_id) REFERENCES employees(employee_id),
-                    FOREIGN KEY (created_by) REFERENCES users(user_id),
-                    FOREIGN KEY (updated_by) REFERENCES users(user_id),
                     UNIQUE(employee_id, attendance_date)
                 )
             """);
 
-            // Create default admin user (password: admin123)
-            // This hash is generated by BCrypt for "admin123"
+            // Create default admin user
             stmt.execute("""
                 INSERT OR IGNORE INTO users (username, password_hash, full_name, role)
                 VALUES ('admin', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LjqXqfBGDlYKUAU1S', 
@@ -278,22 +275,6 @@ public class DatabaseManager {
     }
 
     /**
-     * Execute SQL script
-     */
-    public void executeScript(String script) throws SQLException {
-        String[] statements = script.split(";");
-
-        try (Statement stmt = getConnection().createStatement()) {
-            for (String sql : statements) {
-                sql = sql.trim();
-                if (!sql.isEmpty() && !sql.startsWith("--")) {
-                    stmt.execute(sql);
-                }
-            }
-        }
-    }
-
-    /**
      * Begin transaction
      */
     public void beginTransaction() throws SQLException {
@@ -323,7 +304,7 @@ public class DatabaseManager {
     }
 
     /**
-     * Check if database exists and is accessible
+     * Check if database is initialized
      */
     public boolean isDatabaseInitialized() {
         try (Connection conn = getConnection();
@@ -340,32 +321,5 @@ public class DatabaseManager {
             logger.error("Error checking database status", e);
             return false;
         }
-    }
-
-    /**
-     * Backup database
-     */
-    public void backupDatabase(String backupPath) throws SQLException, IOException {
-        Files.copy(
-                Paths.get(DB_DIRECTORY, DB_NAME),
-                Paths.get(backupPath)
-        );
-        logger.info("Database backed up to: {}", backupPath);
-    }
-
-    /**
-     * Restore database from backup
-     */
-    public void restoreDatabase(String backupPath) throws SQLException, IOException {
-        close();
-
-        Files.copy(
-                Paths.get(backupPath),
-                Paths.get(DB_DIRECTORY, DB_NAME),
-                java.nio.file.StandardCopyOption.REPLACE_EXISTING
-        );
-
-        initialize();
-        logger.info("Database restored from: {}", backupPath);
     }
 }
