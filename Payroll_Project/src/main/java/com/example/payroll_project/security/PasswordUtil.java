@@ -10,10 +10,7 @@ public class PasswordUtil {
     
     // BCrypt work factor (higher = more secure but slower)
     private static final int WORK_FACTOR = 12;
-    
-    /**
-     * Hash a plain text password
-     */
+
     public static String hashPassword(String plainPassword) {
         if (plainPassword == null || plainPassword.isEmpty()) {
             throw new IllegalArgumentException("Password cannot be null or empty");
@@ -21,10 +18,7 @@ public class PasswordUtil {
         
         return BCrypt.hashpw(plainPassword, BCrypt.gensalt(WORK_FACTOR));
     }
-    
-    /**
-     * Verify a plain text password against a hash
-     */
+
     public static boolean verifyPassword(String plainPassword, String hashedPassword) {
         if (plainPassword == null || hashedPassword == null) {
             return false;
@@ -36,11 +30,7 @@ public class PasswordUtil {
             return false;
         }
     }
-    
-    /**
-     * Validate password strength
-     * Minimum 8 characters, at least one letter and one number
-     */
+
     public static boolean isPasswordStrong(String password) {
         if (password == null || password.length() < 8) {
             return false;
@@ -60,10 +50,7 @@ public class PasswordUtil {
         
         return hasLetter && hasDigit;
     }
-    
-    /**
-     * Get password strength message
-     */
+
     public static String getPasswordStrengthMessage(String password) {
         if (password == null || password.isEmpty()) {
             return "Password is required";
