@@ -8,47 +8,59 @@
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.example.payroll_project.controller.LoginController"
-            styleClass="login-root">
+            styleClass="login-root"
+            prefWidth="1280" prefHeight="768">
     
     <!-- Left Panel - Branding -->
     <left>
-        <VBox styleClass="login-brand-panel" alignment="CENTER" spacing="20">
+        <VBox styleClass="login-brand-panel" alignment="CENTER" spacing="30">
             <padding>
-                <Insets top="60" right="60" bottom="60" left="60"/>
+                <Insets top="80" right="60" bottom="80" left="60"/>
             </padding>
             
-            <VBox alignment="CENTER" spacing="15">
+            <VBox alignment="CENTER" spacing="20">
                 <!-- Logo/Icon Placeholder -->
                 <StackPane styleClass="login-logo">
-                    <Label text="KC-02N" styleClass="login-logo-text"/>
+                    <Label text="KC" styleClass="login-logo-text"/>
                 </StackPane>
                 
                 <Text text="Payroll System" styleClass="login-brand-title"/>
                 <Text text="Biometric Scanner Integration" styleClass="login-brand-subtitle"/>
             </VBox>
             
-            <VBox styleClass="login-feature-list" spacing="12">
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="●" styleClass="feature-bullet"/>
+            <Separator style="-fx-background-color: rgba(255, 255, 255, 0.2); -fx-pref-height: 1px;"/>
+            
+            <VBox styleClass="login-feature-list" spacing="16">
+                <Label text="Key Features" style="-fx-text-fill: #F59E0B; -fx-font-size: 14px; -fx-font-weight: 600;"/>
+                
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="✓" styleClass="feature-bullet"/>
                     <Text text="Automated Attendance Processing" styleClass="feature-text"/>
                 </HBox>
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="●" styleClass="feature-bullet"/>
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="✓" styleClass="feature-bullet"/>
                     <Text text="Philippine Law Compliance" styleClass="feature-text"/>
                 </HBox>
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="●" styleClass="feature-bullet"/>
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="✓" styleClass="feature-bullet"/>
                     <Text text="Transparent Calculations" styleClass="feature-text"/>
                 </HBox>
-                <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="●" styleClass="feature-bullet"/>
+                <HBox spacing="12" alignment="CENTER_LEFT">
+                    <Label text="✓" styleClass="feature-bullet"/>
                     <Text text="Individual Payslip Generation" styleClass="feature-text"/>
                 </HBox>
             </VBox>
             
             <Region VBox.vgrow="ALWAYS"/>
             
-            <Text text="© 2026 KC-02N Payroll System" styleClass="login-copyright"/>
+            <VBox spacing="12" alignment="CENTER">
+                <Separator style="-fx-background-color: rgba(255, 255, 255, 0.2); -fx-pref-height: 1px;"/>
+                <HBox spacing="8" alignment="CENTER">
+                    <Label text="🔒" style="-fx-font-size: 14px;"/>
+                    <Text text="Secure • Compliant • Reliable" styleClass="login-copyright"/>
+                </HBox>
+                <Text text="© 2026 KC-02N Payroll System" styleClass="login-copyright"/>
+            </VBox>
         </VBox>
     </left>
     
@@ -56,37 +68,43 @@
     <center>
         <VBox styleClass="login-form-panel" alignment="CENTER">
             <padding>
-                <Insets top="60" right="80" bottom="60" left="80"/>
+                <Insets top="80" right="100" bottom="80" left="100"/>
             </padding>
             
-            <VBox styleClass="login-form-container" spacing="25" alignment="CENTER">
-                <VBox spacing="8" alignment="CENTER">
+            <VBox styleClass="login-form-container" spacing="28" alignment="CENTER" maxWidth="420">
+                <!-- Header -->
+                <VBox spacing="10" alignment="CENTER">
                     <Label text="Welcome Back" styleClass="login-form-title"/>
-                    <Label text="Sign in to continue" styleClass="login-form-subtitle"/>
+                    <Label text="Sign in to your account to continue" styleClass="login-form-subtitle"/>
                 </VBox>
                 
                 <!-- Error Message -->
-                <Label fx:id="errorLabel" styleClass="login-error" wrapText="true" visible="false"/>
+                <Label fx:id="errorLabel" styleClass="login-error" wrapText="true" visible="false" maxWidth="Infinity"/>
                 
                 <!-- Login Form -->
-                <VBox spacing="20" styleClass="login-inputs">
-                    <VBox spacing="8">
+                <VBox spacing="24" styleClass="login-inputs">
+                    <VBox spacing="10">
                         <Label text="Username" styleClass="input-label"/>
                         <TextField fx:id="usernameField" 
                                    promptText="Enter your username"
                                    styleClass="login-input"/>
                     </VBox>
                     
-                    <VBox spacing="8">
-                        <Label text="Password" styleClass="input-label"/>
+                    <VBox spacing="10">
+                        <HBox alignment="CENTER_LEFT">
+                            <Label text="Password" styleClass="input-label"/>
+                            <Region HBox.hgrow="ALWAYS"/>
+                            <Label text="Forgot password?" 
+                                   style="-fx-text-fill: #3B82F6; -fx-font-size: 12px; -fx-cursor: hand;"/>
+                        </HBox>
                         <PasswordField fx:id="passwordField" 
                                        promptText="Enter your password"
                                        styleClass="login-input"/>
                     </VBox>
                     
-                    <HBox spacing="10" alignment="CENTER_LEFT">
+                    <HBox spacing="12" alignment="CENTER_LEFT">
                         <CheckBox fx:id="rememberMeCheckBox" 
-                                  text="Remember me" 
+                                  text="Remember me for 30 days" 
                                   styleClass="remember-checkbox"/>
                     </HBox>
                 </VBox>
@@ -97,7 +115,8 @@
                             text="Sign In" 
                             onAction="#handleLogin"
                             styleClass="login-button"
-                            maxWidth="Infinity"/>
+                            maxWidth="Infinity"
+                            prefWidth="420"/>
                     <ProgressIndicator fx:id="loadingIndicator" 
                                        styleClass="login-loading"
                                        visible="false"
@@ -105,12 +124,40 @@
                                        maxHeight="30"/>
                 </StackPane>
                 
-                <!-- Help Text -->
+                <!-- Divider -->
+                <HBox alignment="CENTER" spacing="12">
+                    <Separator HBox.hgrow="ALWAYS"/>
+                    <Label text="OR" style="-fx-text-fill: #9CA3AF; -fx-font-size: 12px;"/>
+                    <Separator HBox.hgrow="ALWAYS"/>
+                </HBox>
+
+                <VBox spacing="12" alignment="CENTER" 
+                      style="-fx-background-color: #F9FAFB; -fx-padding: 20px; -fx-background-radius: 8px;">
+                    <HBox spacing="8" alignment="CENTER">
+                        <Label text="ℹ️" style="-fx-font-size: 16px;"/>
+                        <Label text="Default Login Credentials" styleClass="help-text-title"/>
+                    </HBox>
+                    <VBox spacing="6" alignment="CENTER">
+                        <HBox spacing="8">
+                            <Label text="Username:" style="-fx-font-weight: 600; -fx-font-size: 13px;"/>
+                            <Label text="admin" styleClass="help-text"/>
+                        </HBox>
+                        <HBox spacing="8">
+                            <Label text="Password:" style="-fx-font-weight: 600; -fx-font-size: 13px;"/>
+                            <Label text="admin123" styleClass="help-text"/>
+                        </HBox>
+                    </VBox>
+                    <Label text="⚠️ Please change the password after first login" styleClass="help-text-warning"/>
+                </VBox>
+
                 <VBox spacing="8" alignment="CENTER">
-                    <Label text="Default credentials:" styleClass="help-text-title"/>
-                    <Label text="Username: admin" styleClass="help-text"/>
-                    <Label text="Password: admin123" styleClass="help-text"/>
-                    <Label text="(Please change after first login)" styleClass="help-text-warning"/>
+                    <Label text="Need help?" style="-fx-text-fill: #6B7280; -fx-font-size: 13px;"/>
+                    <HBox spacing="4" alignment="CENTER">
+                        <Label text="Contact your system administrator or visit" 
+                               style="-fx-text-fill: #6B7280; -fx-font-size: 12px;"/>
+                        <Label text="support center" 
+                               style="-fx-text-fill: #3B82F6; -fx-font-size: 12px; -fx-cursor: hand;"/>
+                    </HBox>
                 </VBox>
             </VBox>
         </VBox>

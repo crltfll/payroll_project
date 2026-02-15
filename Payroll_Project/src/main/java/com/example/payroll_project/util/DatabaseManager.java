@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.sql.*;
@@ -12,9 +14,7 @@ import java.sql.*;
 /**
  * Database Manager (SEC2: Data Protection)
  * Manages SQLite database connections
- *
- * NOTE: This version uses standard SQLite. For production encryption (AES-256),
- * you can integrate SQLCipher separately or use application-level encryption.
+ * Fixed for IntelliJ IDEA compatibility
  */
 public class DatabaseManager {
 
@@ -77,38 +77,82 @@ public class DatabaseManager {
 
     /**
      * Initialize database schema
+     * Works with both file system and classpath resources (IntelliJ compatible)
      */
     private void initializeSchema() throws SQLException {
         logger.info("Initializing database schema...");
 
-        String schemaFile = "docs/schema.sql";
+        // Try multiple locations for the schema file
+        String[] possiblePaths = {
+            "docs/database_schema.sql",           // Maven/command line
+            "../docs/database_schema.sql",        // IntelliJ relative
+            "Payroll_Project/docs/database_schema.sql", // From project root
+        };
 
-        if (!Files.exists(Paths.get(schemaFile))) {
-            logger.warn("Schema file not found: {}. Creating basic tables manually.", schemaFile);
+        String schema = null;
+        
+        // First, try to load from file system
+        for (String path : possiblePaths) {
+            if (Files.exists(Paths.get(path))) {
+                try {
+                    schema = new String(Files.readAllBytes(Paths.get(path)), StandardCharsets.UTF_8);
+                    logger.info("Schema loaded from file: {}", path);
+                    break;
+                } catch (IOException e) {
+                    logger.warn("Failed to read schema from: {}", path);
+                }
+            }
+        }
+        
+        // If not found in file system, try classpath (if schema is in resources)
+        if (schema == null) {
+            try (InputStream is = getClass().getClassLoader().getResourceAsStream("database_schema.sql")) {
+                if (is != null) {
+                    schema = new String(is.readAllBytes(), StandardCharsets.UTF_8);
+                    logger.info("Schema loaded from classpath");
+                }
+            } catch (IOException e) {
+                logger.warn("Failed to read schema from classpath", e);
+            }
+        }
+
+        // If still not found, create basic schema
+        if (schema == null || schema.trim().isEmpty()) {
+            logger.warn("Schema file not found in any location. Creating basic schema manually.");
             createBasicSchema();
             return;
         }
 
         try {
-            String schema = new String(Files.readAllBytes(Paths.get(schemaFile)));
+            // Execute the schema
+            executeSchemaScript(schema);
+            logger.info("Schema initialized successfully");
+        } catch (SQLException e) {
+            logger.error("Failed to execute schema", e);
+            throw e;
+        }
+    }
 
-            // Split by semicolon and execute each statement
-            String[] statements = schema.split(";");
+    /**
+     * Execute SQL script from string
+     */
+    private void executeSchemaScript(String script) throws SQLException {
+        // Split by semicolon and execute each statement
+        String[] statements = script.split(";");
 
-            try (Statement stmt = connection.createStatement()) {
-                for (String sql : statements) {
-                    sql = sql.trim();
-                    if (!sql.isEmpty() && !sql.startsWith("--")) {
+        try (Statement stmt = connection.createStatement()) {
+            for (String sql : statements) {
+                sql = sql.trim();
+                // Skip empty statements and comments
+                if (!sql.isEmpty() && !sql.startsWith("--")) {
+                    try {
                         stmt.execute(sql);
+                    } catch (SQLException e) {
+                        // Log but continue with other statements
+                        logger.warn("Failed to execute statement (continuing): {}", e.getMessage());
                     }
                 }
             }
-
-            logger.info("Schema initialized from file: {}", schemaFile);
-
-        } catch (IOException e) {
-            logger.error("Failed to read schema file", e);
-            throw new SQLException("Failed to initialize schema", e);
         }
     }
 
@@ -163,10 +207,45 @@ public class DatabaseManager {
                 )
             """);
 
+            // Attendance records table
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS attendance_records (
+                    attendance_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    employee_id INTEGER NOT NULL,
+                    attendance_date DATE NOT NULL,
+                    time_in_1 TIME,
+                    time_out_1 TIME,
+                    time_in_2 TIME,
+                    time_out_2 TIME,
+                    regular_hours DECIMAL(5, 2) DEFAULT 0,
+                    overtime_hours DECIMAL(5, 2) DEFAULT 0,
+                    night_diff_hours DECIMAL(5, 2) DEFAULT 0,
+                    late_minutes INTEGER DEFAULT 0,
+                    undertime_minutes INTEGER DEFAULT 0,
+                    is_absent BOOLEAN DEFAULT 0,
+                    is_holiday BOOLEAN DEFAULT 0,
+                    is_rest_day BOOLEAN DEFAULT 0,
+                    has_anomaly BOOLEAN DEFAULT 0,
+                    anomaly_description TEXT,
+                    is_manually_edited BOOLEAN DEFAULT 0,
+                    import_batch_id INTEGER,
+                    data_source TEXT DEFAULT 'FA2000_CSV',
+                    created_by INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_by INTEGER,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (employee_id) REFERENCES employees(employee_id),
+                    FOREIGN KEY (created_by) REFERENCES users(user_id),
+                    FOREIGN KEY (updated_by) REFERENCES users(user_id),
+                    UNIQUE(employee_id, attendance_date)
+                )
+            """);
+
             // Create default admin user (password: admin123)
+            // This hash is generated by BCrypt for "admin123"
             stmt.execute("""
                 INSERT OR IGNORE INTO users (username, password_hash, full_name, role)
-                VALUES ('admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', 
+                VALUES ('admin', '$2a$12$LQv3c1yqBWVHxkd0LHAkCOYz6TtxMQJqhN8/LjqXqfBGDlYKUAU1S', 
                         'System Administrator', 'ADMIN')
             """);
 
