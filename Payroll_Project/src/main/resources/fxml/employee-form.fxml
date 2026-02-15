@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.payroll_project.controller.EmployeeFormController"
+      spacing="20"
+      style="-fx-padding: 30px;">
+    
+    <Label text="Employee Information" styleClass="card-title" style="-fx-font-size: 20px;"/>
+    
+    <Label fx:id="errorLabel" styleClass="login-error" wrapText="true" visible="false" maxWidth="Infinity"/>
+    
+    <ScrollPane fitToWidth="true" style="-fx-background-color: transparent;">
+        <VBox spacing="20">
+            <!-- Basic Information -->
+            <VBox styleClass="card" spacing="16">
+                <Label text="Basic Information" styleClass="card-title" style="-fx-font-size: 16px;"/>
+                
+                <GridPane hgap="15" vgap="12">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="50"/>
+                        <ColumnConstraints percentWidth="50"/>
+                    </columnConstraints>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                        <Label text="Employee Code *" styleClass="input-label"/>
+                        <TextField fx:id="employeeCodeField" promptText="e.g., EMP001"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                        <Label text="Position *" styleClass="input-label"/>
+                        <TextField fx:id="positionField" promptText="e.g., Accountant"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                        <Label text="First Name *" styleClass="input-label"/>
+                        <TextField fx:id="firstNameField" promptText="First name"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <Label text="Middle Name" styleClass="input-label"/>
+                        <TextField fx:id="middleNameField" promptText="Middle name"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="2">
+                        <Label text="Last Name *" styleClass="input-label"/>
+                        <TextField fx:id="lastNameField" promptText="Last name"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="2">
+                        <Label text="Department" styleClass="input-label"/>
+                        <TextField fx:id="departmentField" promptText="e.g., Finance"/>
+                    </VBox>
+                </GridPane>
+            </VBox>
+            
+            <!-- Contact Information -->
+            <VBox styleClass="card" spacing="16">
+                <Label text="Contact Information" styleClass="card-title" style="-fx-font-size: 16px;"/>
+                
+                <GridPane hgap="15" vgap="12">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="50"/>
+                        <ColumnConstraints percentWidth="50"/>
+                    </columnConstraints>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                        <Label text="Email" styleClass="input-label"/>
+                        <TextField fx:id="emailField" promptText="email@example.com"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                        <Label text="Phone Number" styleClass="input-label"/>
+                        <TextField fx:id="phoneNumberField" promptText="+63 XXX XXX XXXX"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.columnSpan="2">
+                        <Label text="Address" styleClass="input-label"/>
+                        <TextArea fx:id="addressArea" promptText="Complete address" 
+                                 prefRowCount="2" wrapText="true"/>
+                    </VBox>
+                </GridPane>
+            </VBox>
+            
+            <!-- Employment Details -->
+            <VBox styleClass="card" spacing="16">
+                <Label text="Employment Details" styleClass="card-title" style="-fx-font-size: 16px;"/>
+                
+                <GridPane hgap="15" vgap="12">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="50"/>
+                        <ColumnConstraints percentWidth="50"/>
+                    </columnConstraints>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                        <Label text="Employment Type *" styleClass="input-label"/>
+                        <ComboBox fx:id="employmentTypeCombo" maxWidth="Infinity"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                        <Label text="Date Hired *" styleClass="input-label"/>
+                        <DatePicker fx:id="dateHiredPicker" maxWidth="Infinity"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                        <Label text="Base Rate *" styleClass="input-label"/>
+                        <TextField fx:id="baseRateField" promptText="0.00"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <Label text="Rate Type *" styleClass="input-label"/>
+                        <ComboBox fx:id="rateTypeCombo" maxWidth="Infinity"/>
+                    </VBox>
+                </GridPane>
+            </VBox>
+            
+            <!-- Government IDs -->
+            <VBox styleClass="card" spacing="16">
+                <Label text="Government IDs" styleClass="card-title" style="-fx-font-size: 16px;"/>
+                
+                <GridPane hgap="15" vgap="12">
+                    <columnConstraints>
+                        <ColumnConstraints percentWidth="50"/>
+                        <ColumnConstraints percentWidth="50"/>
+                    </columnConstraints>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                        <Label text="SSS Number" styleClass="input-label"/>
+                        <TextField fx:id="sssNumberField" promptText="XX-XXXXXXX-X"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                        <Label text="PhilHealth Number" styleClass="input-label"/>
+                        <TextField fx:id="philhealthNumberField" promptText="XX-XXXXXXXXX-X"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                        <Label text="Pag-IBIG Number" styleClass="input-label"/>
+                        <TextField fx:id="pagibigNumberField" promptText="XXXX-XXXX-XXXX"/>
+                    </VBox>
+                    
+                    <VBox spacing="6" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                        <Label text="TIN" styleClass="input-label"/>
+                        <TextField fx:id="tinField" promptText="XXX-XXX-XXX-XXX"/>
+                    </VBox>
+                </GridPane>
+            </VBox>
+            
+            <!-- Status -->
+            <VBox styleClass="card" spacing="16">
+                <CheckBox fx:id="activeCheckbox" text="Active Employee" 
+                         style="-fx-font-weight: 600;"/>
+            </VBox>
+        </VBox>
+    </ScrollPane>
+    
+    <!-- Action Buttons -->
+    <HBox spacing="12" alignment="CENTER_RIGHT">
+        <Button fx:id="cancelButton" text="Cancel" styleClass="button-secondary" 
+                onAction="#handleCancel" style="-fx-padding: 10px 24px;"/>
+        <Button fx:id="saveButton" text="Save Employee" styleClass="button-primary" 
+                onAction="#handleSave" style="-fx-padding: 10px 24px;"/>
+    </HBox>
+</VBox>
