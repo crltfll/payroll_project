@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.payroll_project.controller.LoginController"
+            styleClass="login-root">
+    
+    <!-- Left Panel - Branding -->
+    <left>
+        <VBox styleClass="login-brand-panel" alignment="CENTER" spacing="20">
+            <padding>
+                <Insets top="60" right="60" bottom="60" left="60"/>
+            </padding>
+            
+            <VBox alignment="CENTER" spacing="15">
+                <!-- Logo/Icon Placeholder -->
+                <StackPane styleClass="login-logo">
+                    <Label text="KC-02N" styleClass="login-logo-text"/>
+                </StackPane>
+                
+                <Text text="Payroll System" styleClass="login-brand-title"/>
+                <Text text="Biometric Scanner Integration" styleClass="login-brand-subtitle"/>
+            </VBox>
+            
+            <VBox styleClass="login-feature-list" spacing="12">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="●" styleClass="feature-bullet"/>
+                    <Text text="Automated Attendance Processing" styleClass="feature-text"/>
+                </HBox>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="●" styleClass="feature-bullet"/>
+                    <Text text="Philippine Law Compliance" styleClass="feature-text"/>
+                </HBox>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="●" styleClass="feature-bullet"/>
+                    <Text text="Transparent Calculations" styleClass="feature-text"/>
+                </HBox>
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="●" styleClass="feature-bullet"/>
+                    <Text text="Individual Payslip Generation" styleClass="feature-text"/>
+                </HBox>
+            </VBox>
+            
+            <Region VBox.vgrow="ALWAYS"/>
+            
+            <Text text="© 2026 KC-02N Payroll System" styleClass="login-copyright"/>
+        </VBox>
+    </left>
+    
+    <!-- Right Panel - Login Form -->
+    <center>
+        <VBox styleClass="login-form-panel" alignment="CENTER">
+            <padding>
+                <Insets top="60" right="80" bottom="60" left="80"/>
+            </padding>
+            
+            <VBox styleClass="login-form-container" spacing="25" alignment="CENTER">
+                <VBox spacing="8" alignment="CENTER">
+                    <Label text="Welcome Back" styleClass="login-form-title"/>
+                    <Label text="Sign in to continue" styleClass="login-form-subtitle"/>
+                </VBox>
+                
+                <!-- Error Message -->
+                <Label fx:id="errorLabel" styleClass="login-error" wrapText="true" visible="false"/>
+                
+                <!-- Login Form -->
+                <VBox spacing="20" styleClass="login-inputs">
+                    <VBox spacing="8">
+                        <Label text="Username" styleClass="input-label"/>
+                        <TextField fx:id="usernameField" 
+                                   promptText="Enter your username"
+                                   styleClass="login-input"/>
+                    </VBox>
+                    
+                    <VBox spacing="8">
+                        <Label text="Password" styleClass="input-label"/>
+                        <PasswordField fx:id="passwordField" 
+                                       promptText="Enter your password"
+                                       styleClass="login-input"/>
+                    </VBox>
+                    
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <CheckBox fx:id="rememberMeCheckBox" 
+                                  text="Remember me" 
+                                  styleClass="remember-checkbox"/>
+                    </HBox>
+                </VBox>
+                
+                <!-- Login Button with Loading Indicator -->
+                <StackPane>
+                    <Button fx:id="loginButton" 
+                            text="Sign In" 
+                            onAction="#handleLogin"
+                            styleClass="login-button"
+                            maxWidth="Infinity"/>
+                    <ProgressIndicator fx:id="loadingIndicator" 
+                                       styleClass="login-loading"
+                                       visible="false"
+                                       maxWidth="30" 
+                                       maxHeight="30"/>
+                </StackPane>
+                
+                <!-- Help Text -->
+                <VBox spacing="8" alignment="CENTER">
+                    <Label text="Default credentials:" styleClass="help-text-title"/>
+                    <Label text="Username: admin" styleClass="help-text"/>
+                    <Label text="Password: admin123" styleClass="help-text"/>
+                    <Label text="(Please change after first login)" styleClass="help-text-warning"/>
+                </VBox>
+            </VBox>
+        </VBox>
+    </center>
+</BorderPane>

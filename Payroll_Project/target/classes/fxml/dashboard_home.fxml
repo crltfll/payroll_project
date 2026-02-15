@@ -1,0 +1,195 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.payroll_project.controller.DashboardHomeController"
+      spacing="24">
+    
+    <!-- Page Header -->
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <VBox spacing="4">
+            <Label text="Dashboard" styleClass="card-title" style="-fx-font-size: 28px;"/>
+            <Label text="Welcome back! Here's an overview of your payroll system." 
+                   styleClass="card-subtitle"/>
+        </VBox>
+        
+        <Region HBox.hgrow="ALWAYS"/>
+        
+        <HBox spacing="10">
+            <Button text="Download Report" styleClass="button-secondary"/>
+            <Button text="Process Payroll" styleClass="button-primary"/>
+        </HBox>
+    </HBox>
+    
+    <!-- Stats Cards Row -->
+    <GridPane hgap="20" vgap="20">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+            <ColumnConstraints percentWidth="25"/>
+        </columnConstraints>
+        
+        <!-- Total Employees -->
+        <VBox styleClass="stat-card" spacing="12" GridPane.columnIndex="0">
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <Label text="👥" style="-fx-font-size: 24px;"/>
+                <Label text="Total Employees" styleClass="stat-label"/>
+            </HBox>
+            <Label fx:id="totalEmployeesLabel" text="0" styleClass="stat-value"/>
+            <Label fx:id="employeesChangeLabel" text="+0 this month" 
+                   styleClass="stat-change-positive"/>
+        </VBox>
+        
+        <!-- Active Attendance -->
+        <VBox styleClass="stat-card" spacing="12" GridPane.columnIndex="1">
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <Label text="📋" style="-fx-font-size: 24px;"/>
+                <Label text="Today's Attendance" styleClass="stat-label"/>
+            </HBox>
+            <Label fx:id="todayAttendanceLabel" text="0" styleClass="stat-value"/>
+            <Label fx:id="attendanceRateLabel" text="0% attendance rate" 
+                   styleClass="stat-change-positive"/>
+        </VBox>
+        
+        <!-- Pending Payroll -->
+        <VBox styleClass="stat-card" spacing="12" GridPane.columnIndex="2">
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <Label text="💰" style="-fx-font-size: 24px;"/>
+                <Label text="Pending Payroll" styleClass="stat-label"/>
+            </HBox>
+            <Label fx:id="pendingPayrollLabel" text="0" styleClass="stat-value"/>
+            <Label fx:id="payrollAmountLabel" text="₱0.00 total" 
+                   styleClass="stat-change-positive"/>
+        </VBox>
+        
+        <!-- Processing Status -->
+        <VBox styleClass="stat-card" spacing="12" GridPane.columnIndex="3">
+            <HBox alignment="CENTER_LEFT" spacing="10">
+                <Label text="⚡" style="-fx-font-size: 24px;"/>
+                <Label text="System Status" styleClass="stat-label"/>
+            </HBox>
+            <Label fx:id="systemStatusLabel" text="Active" styleClass="stat-value" 
+                   style="-fx-font-size: 24px; -fx-text-fill: #10B981;"/>
+            <Label text="All systems operational" styleClass="stat-change-positive"/>
+        </VBox>
+    </GridPane>
+    
+    <!-- Content Grid -->
+    <GridPane hgap="20" vgap="20">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="60"/>
+            <ColumnConstraints percentWidth="40"/>
+        </columnConstraints>
+        <rowConstraints>
+            <RowConstraints/>
+            <RowConstraints/>
+        </rowConstraints>
+        
+        <!-- Recent Attendance Card -->
+        <VBox styleClass="card" spacing="16" GridPane.columnIndex="0" GridPane.rowIndex="0">
+            <VBox styleClass="card-header" spacing="8">
+                <Label text="Recent Attendance Records" styleClass="card-title"/>
+                <Label text="Latest attendance imports and updates" styleClass="card-subtitle"/>
+            </VBox>
+            
+            <TableView fx:id="recentAttendanceTable" VBox.vgrow="ALWAYS" 
+                       style="-fx-pref-height: 300px;">
+                <columns>
+                    <TableColumn text="Employee" prefWidth="150"/>
+                    <TableColumn text="Date" prefWidth="100"/>
+                    <TableColumn text="Time In" prefWidth="80"/>
+                    <TableColumn text="Time Out" prefWidth="80"/>
+                    <TableColumn text="Hours" prefWidth="60"/>
+                </columns>
+            </TableView>
+        </VBox>
+        
+        <!-- Quick Actions Card -->
+        <VBox styleClass="card" spacing="16" GridPane.columnIndex="1" GridPane.rowIndex="0">
+            <VBox styleClass="card-header" spacing="8">
+                <Label text="Quick Actions" styleClass="card-title"/>
+                <Label text="Common tasks and operations" styleClass="card-subtitle"/>
+            </VBox>
+            
+            <VBox spacing="10">
+                <Button text="Import FA2000 CSV" maxWidth="Infinity" 
+                        styleClass="button-primary" style="-fx-padding: 12px;"/>
+                <Button text="Add New Employee" maxWidth="Infinity" 
+                        styleClass="button-secondary" style="-fx-padding: 12px;"/>
+                <Button text="Create Pay Period" maxWidth="Infinity" 
+                        styleClass="button-secondary" style="-fx-padding: 12px;"/>
+                <Button text="Generate Payslips" maxWidth="Infinity" 
+                        styleClass="button-secondary" style="-fx-padding: 12px;"/>
+                <Button text="View Reports" maxWidth="Infinity" 
+                        styleClass="button-secondary" style="-fx-padding: 12px;"/>
+            </VBox>
+        </VBox>
+        
+        <!-- Upcoming Pay Periods -->
+        <VBox styleClass="card" spacing="16" GridPane.columnIndex="0" GridPane.rowIndex="1">
+            <VBox styleClass="card-header" spacing="8">
+                <Label text="Upcoming Pay Periods" styleClass="card-title"/>
+                <Label text="Scheduled payroll processing dates" styleClass="card-subtitle"/>
+            </VBox>
+            
+            <VBox spacing="12">
+                <HBox alignment="CENTER_LEFT" spacing="15" style="-fx-padding: 12px; 
+                      -fx-background-color: #F3F4F6; -fx-background-radius: 8px;">
+                    <VBox spacing="4">
+                        <Label text="February 16-28, 2026" style="-fx-font-weight: 600;"/>
+                        <Label text="Pay Date: March 5, 2026" styleClass="card-subtitle"/>
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label text="DRAFT" styleClass="badge badge-warning"/>
+                </HBox>
+                
+                <HBox alignment="CENTER_LEFT" spacing="15" style="-fx-padding: 12px; 
+                      -fx-background-color: #F3F4F6; -fx-background-radius: 8px;">
+                    <VBox spacing="4">
+                        <Label text="March 1-15, 2026" style="-fx-font-weight: 600;"/>
+                        <Label text="Pay Date: March 20, 2026" styleClass="card-subtitle"/>
+                    </VBox>
+                    <Region HBox.hgrow="ALWAYS"/>
+                    <Label text="DRAFT" styleClass="badge badge-info"/>
+                </HBox>
+            </VBox>
+        </VBox>
+        
+        <!-- System Info -->
+        <VBox styleClass="card" spacing="16" GridPane.columnIndex="1" GridPane.rowIndex="1">
+            <VBox styleClass="card-header" spacing="8">
+                <Label text="System Information" styleClass="card-title"/>
+                <Label text="Application details and compliance" styleClass="card-subtitle"/>
+            </VBox>
+            
+            <VBox spacing="12">
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="Version:" style="-fx-font-weight: 600; -fx-min-width: 120px;"/>
+                    <Label text="1.0.0"/>
+                </HBox>
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="Database:" style="-fx-font-weight: 600; -fx-min-width: 120px;"/>
+                    <Label text="SQLite"/>
+                </HBox>
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="Encryption:" style="-fx-font-weight: 600; -fx-min-width: 120px;"/>
+                    <Label text="AES-256"/>
+                </HBox>
+                <HBox alignment="CENTER_LEFT" spacing="10">
+                    <Label text="Compliance:" style="-fx-font-weight: 600; -fx-min-width: 120px;"/>
+                    <VBox spacing="4">
+                        <Label text="✓ Data Privacy Act 2012"/>
+                        <Label text="✓ Philippine Labor Code"/>
+                        <Label text="✓ BIR TRAIN Law"/>
+                    </VBox>
+                </HBox>
+            </VBox>
+        </VBox>
+    </GridPane>
+</VBox>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      spacing="24">
+    
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <VBox spacing="4">
+            <Label text="Payroll Processing" styleClass="card-title" style="-fx-font-size: 28px;"/>
+            <Label text="Calculate salaries with Philippine law-compliant deductions" 
+                   styleClass="card-subtitle"/>
+        </VBox>
+        
+        <Region HBox.hgrow="ALWAYS"/>
+        
+        <HBox spacing="10">
+            <Button text="Create Pay Period" styleClass="button-secondary"/>
+            <Button text="Process Payroll" styleClass="button-primary"/>
+        </HBox>
+    </HBox>
+    
+    <VBox styleClass="card" alignment="CENTER" spacing="20" style="-fx-padding: 80px;">
+        <Label text="💰" style="-fx-font-size: 64px;"/>
+        <Label text="Payroll Processing Module" 
+               style="-fx-font-size: 24px; -fx-font-weight: 600;"/>
+        <Label text="Process employee salaries with automated calculations for:" 
+               styleClass="card-subtitle"/>
+        <VBox spacing="8" alignment="CENTER">
+            <Label text="• SSS, PhilHealth, Pag-IBIG contributions"/>
+            <Label text="• BIR withholding tax (TRAIN Law)"/>
+            <Label text="• Overtime, night differential, holiday pay"/>
+            <Label text="• Individual payslip generation"/>
+        </VBox>
+        <Button text="Start Processing" styleClass="button-primary" 
+                style="-fx-padding: 12px 32px; -fx-margin-top: 20px;"/>
+    </VBox>
+</VBox>

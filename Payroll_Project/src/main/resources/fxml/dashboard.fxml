@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Text?>
+
+<BorderPane xmlns="http://javafx.com/javafx/21"
+            xmlns:fx="http://javafx.com/fxml/1"
+            fx:controller="com.example.payroll_project.controller.DashboardController"
+            styleClass="dashboard-root">
+
+    <top>
+        <HBox styleClass="dashboard-header" alignment="CENTER_LEFT" spacing="20">
+            <padding>
+                <Insets top="15" right="25" bottom="15" left="25"/>
+            </padding>
+            
+            <HBox alignment="CENTER_LEFT" spacing="12" HBox.hgrow="ALWAYS">
+                <StackPane styleClass="header-logo">
+                    <Label text="KC" styleClass="header-logo-text"/>
+                </StackPane>
+                <VBox spacing="2">
+                    <Label text="KC-02N Payroll System" styleClass="header-title"/>
+                    <Label text="Automated Payroll Management" styleClass="header-subtitle"/>
+                </VBox>
+            </HBox>
+            
+            <!-- Quick Actions -->
+            <HBox spacing="10" alignment="CENTER_RIGHT">
+                <Button text="Import Attendance" styleClass="header-button"/>
+                <Button text="Process Payroll" styleClass="header-button-primary"/>
+            </HBox>
+
+            <Separator orientation="VERTICAL"/>
+            <VBox spacing="2" alignment="CENTER_RIGHT">
+                <Label fx:id="userNameLabel" styleClass="header-user-name"/>
+                <Label fx:id="userRoleLabel" styleClass="header-user-role"/>
+            </VBox>
+        </HBox>
+    </top>
+
+    <left>
+        <VBox styleClass="dashboard-sidebar" spacing="8">
+            <padding>
+                <Insets top="20" right="0" bottom="20" left="0"/>
+            </padding>
+            
+            <VBox fx:id="navigationMenu" spacing="4">
+                <padding>
+                    <Insets top="0" right="15" bottom="0" left="15"/>
+                </padding>
+                
+                <!-- Navigation Buttons -->
+                <Button fx:id="dashboardButton" 
+                        text="Dashboard" 
+                        onAction="#showDashboardHome"
+                        styleClass="nav-button"
+                        maxWidth="Infinity">
+                    <graphic>
+                        <Label text="🏠" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+                
+                <Button fx:id="employeesButton" 
+                        text="Employees" 
+                        onAction="#showEmployees"
+                        styleClass="nav-button"
+                        maxWidth="Infinity">
+                    <graphic>
+                        <Label text="👥" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+                
+                <Button fx:id="attendanceButton" 
+                        text="Attendance" 
+                        onAction="#showAttendance"
+                        styleClass="nav-button"
+                        maxWidth="Infinity">
+                    <graphic>
+                        <Label text="📋" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+                
+                <Button fx:id="payrollButton" 
+                        text="Payroll" 
+                        onAction="#showPayroll"
+                        styleClass="nav-button"
+                        maxWidth="Infinity">
+                    <graphic>
+                        <Label text="💰" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+                
+                <Button fx:id="reportsButton" 
+                        text="Reports" 
+                        onAction="#showReports"
+                        styleClass="nav-button"
+                        maxWidth="Infinity">
+                    <graphic>
+                        <Label text="📊" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+                
+                <Separator/>
+                
+                <Button fx:id="settingsButton" 
+                        text="Settings" 
+                        onAction="#showSettings"
+                        styleClass="nav-button"
+                        maxWidth="Infinity">
+                    <graphic>
+                        <Label text="⚙️" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+            </VBox>
+            
+            <Region VBox.vgrow="ALWAYS"/>
+            
+            <VBox spacing="10">
+                <padding>
+                    <Insets top="0" right="15" bottom="0" left="15"/>
+                </padding>
+                
+                <Separator/>
+                
+                <Button fx:id="logoutButton" 
+                        text="Logout" 
+                        onAction="#handleLogout"
+                        styleClass="nav-button-logout"
+                        maxWidth="Infinity">
+                    <graphic>
+                        <Label text="🚪" styleClass="nav-icon"/>
+                    </graphic>
+                </Button>
+            </VBox>
+        </VBox>
+    </left>
+
+    <center>
+        <StackPane fx:id="contentArea" styleClass="dashboard-content">
+        </StackPane>
+    </center>
+</BorderPane>

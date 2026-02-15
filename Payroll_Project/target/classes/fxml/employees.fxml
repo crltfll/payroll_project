@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.payroll_project.controller.EmployeesController"
+      spacing="24">
+    
+    <!-- Page Header -->
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <VBox spacing="4">
+            <Label text="Employee Management" styleClass="card-title" style="-fx-font-size: 28px;"/>
+            <Label text="Manage employee information, rates, and government IDs" 
+                   styleClass="card-subtitle"/>
+        </VBox>
+        
+        <Region HBox.hgrow="ALWAYS"/>
+        
+        <HBox spacing="10">
+            <Button text="Export" styleClass="button-secondary" onAction="#handleExport"/>
+            <Button text="Add Employee" styleClass="button-primary" onAction="#handleAddEmployee"/>
+        </HBox>
+    </HBox>
+    
+    <!-- Search and Filter Bar -->
+    <VBox styleClass="card" spacing="16">
+        <HBox spacing="12" alignment="CENTER_LEFT">
+            <TextField fx:id="searchField" 
+                       promptText="Search by name, code, or department..." 
+                       style="-fx-min-width: 300px;"
+                       onKeyReleased="#handleSearch"/>
+            
+            <ComboBox fx:id="employmentTypeFilter" 
+                      promptText="Employment Type"
+                      style="-fx-min-width: 180px;"
+                      onAction="#handleFilter"/>
+            
+            <ComboBox fx:id="departmentFilter" 
+                      promptText="Department"
+                      style="-fx-min-width: 180px;"
+                      onAction="#handleFilter"/>
+            
+            <Region HBox.hgrow="ALWAYS"/>
+            
+            <Label text="Active Only"/>
+            <CheckBox fx:id="activeOnlyCheckbox" 
+                      selected="true"
+                      onAction="#handleFilter"/>
+            
+            <Button text="Clear Filters" styleClass="button-secondary" onAction="#handleClearFilters"/>
+        </HBox>
+    </VBox>
+    
+    <!-- Employee Table -->
+    <VBox styleClass="card" spacing="16" VBox.vgrow="ALWAYS">
+        <HBox styleClass="card-header" alignment="CENTER_LEFT" spacing="15">
+            <VBox spacing="4">
+                <Label text="Employee List" styleClass="card-title"/>
+                <Label fx:id="employeeCountLabel" text="0 employees" styleClass="card-subtitle"/>
+            </VBox>
+            
+            <Region HBox.hgrow="ALWAYS"/>
+            
+            <Button text="Refresh" styleClass="button-secondary" onAction="#handleRefresh"/>
+        </HBox>
+        
+        <TableView fx:id="employeeTable" VBox.vgrow="ALWAYS">
+            <columns>
+                <TableColumn fx:id="codeColumn" text="Code" prefWidth="80"/>
+                <TableColumn fx:id="nameColumn" text="Full Name" prefWidth="200"/>
+                <TableColumn fx:id="positionColumn" text="Position" prefWidth="150"/>
+                <TableColumn fx:id="departmentColumn" text="Department" prefWidth="120"/>
+                <TableColumn fx:id="employmentTypeColumn" text="Type" prefWidth="120"/>
+                <TableColumn fx:id="baseRateColumn" text="Base Rate" prefWidth="100"/>
+                <TableColumn fx:id="dateHiredColumn" text="Date Hired" prefWidth="100"/>
+                <TableColumn fx:id="statusColumn" text="Status" prefWidth="80"/>
+                <TableColumn fx:id="actionsColumn" text="Actions" prefWidth="120"/>
+            </columns>
+            <placeholder>
+                <VBox alignment="CENTER" spacing="10" style="-fx-padding: 40px;">
+                    <Label text="No employees found" 
+                           style="-fx-font-size: 16px; -fx-text-fill: #6B7280;"/>
+                    <Label text="Click 'Add Employee' to get started" 
+                           styleClass="card-subtitle"/>
+                </VBox>
+            </placeholder>
+        </TableView>
+        
+        <!-- Pagination -->
+        <HBox alignment="CENTER" spacing="10">
+            <Button text="Previous" styleClass="button-secondary" onAction="#handlePreviousPage"/>
+            <Label fx:id="pageLabel" text="Page 1 of 1"/>
+            <Button text="Next" styleClass="button-secondary" onAction="#handleNextPage"/>
+        </HBox>
+    </VBox>
+</VBox>

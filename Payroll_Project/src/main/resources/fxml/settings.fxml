@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      spacing="24">
+    
+    <HBox alignment="CENTER_LEFT" spacing="20">
+        <VBox spacing="4">
+            <Label text="System Settings" styleClass="card-title" style="-fx-font-size: 28px;"/>
+            <Label text="Configure system preferences and statutory rates" 
+                   styleClass="card-subtitle"/>
+        </VBox>
+    </HBox>
+    
+    <GridPane hgap="20" vgap="20">
+        <columnConstraints>
+            <ColumnConstraints percentWidth="50"/>
+            <ColumnConstraints percentWidth="50"/>
+        </columnConstraints>
+        
+        <!-- Statutory Tables Card -->
+        <VBox styleClass="card" spacing="16" GridPane.columnIndex="0">
+            <Label text="Statutory Contribution Tables" styleClass="card-title"/>
+            <VBox spacing="12">
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <Label text="SSS Contribution Table" style="-fx-min-width: 200px;"/>
+                    <Button text="Update" styleClass="button-secondary"/>
+                </HBox>
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <Label text="PhilHealth Contribution Table" style="-fx-min-width: 200px;"/>
+                    <Button text="Update" styleClass="button-secondary"/>
+                </HBox>
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <Label text="Pag-IBIG Contribution Table" style="-fx-min-width: 200px;"/>
+                    <Button text="Update" styleClass="button-secondary"/>
+                </HBox>
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <Label text="BIR Tax Table (TRAIN Law)" style="-fx-min-width: 200px;"/>
+                    <Button text="Update" styleClass="button-secondary"/>
+                </HBox>
+            </VBox>
+        </VBox>
+        
+        <!-- System Configuration Card -->
+        <VBox styleClass="card" spacing="16" GridPane.columnIndex="1">
+            <Label text="System Configuration" styleClass="card-title"/>
+            <VBox spacing="12">
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <Label text="Regular Hours Per Day" style="-fx-min-width: 200px;"/>
+                    <TextField text="8" style="-fx-pref-width: 80px;"/>
+                </HBox>
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <Label text="Overtime Rate" style="-fx-min-width: 200px;"/>
+                    <TextField text="1.25" style="-fx-pref-width: 80px;"/>
+                </HBox>
+                <HBox alignment="CENTER_LEFT" spacing="12">
+                    <Label text="Night Differential Rate" style="-fx-min-width: 200px;"/>
+                    <TextField text="1.10" style="-fx-pref-width: 80px;"/>
+                </HBox>
+                <Button text="Save Configuration" styleClass="button-primary"/>
+            </VBox>
+        </VBox>
+        
+        <!-- Database Management Card -->
+        <VBox styleClass="card" spacing="16" GridPane.columnIndex="0" GridPane.rowIndex="1">
+            <Label text="Database Management" styleClass="card-title"/>
+            <VBox spacing="12">
+                <Button text="Backup Database" styleClass="button-secondary" maxWidth="Infinity"/>
+                <Button text="Restore Database" styleClass="button-secondary" maxWidth="Infinity"/>
+                <Button text="Export Data" styleClass="button-secondary" maxWidth="Infinity"/>
+            </VBox>
+        </VBox>
+        
+        <!-- User Management Card -->
+        <VBox styleClass="card" spacing="16" GridPane.columnIndex="1" GridPane.rowIndex="1">
+            <Label text="User Management" styleClass="card-title"/>
+            <VBox spacing="12">
+                <Button text="Manage Users" styleClass="button-secondary" maxWidth="Infinity"/>
+                <Button text="Change Password" styleClass="button-secondary" maxWidth="Infinity"/>
+                <Button text="View Audit Log" styleClass="button-secondary" maxWidth="Infinity"/>
+            </VBox>
+        </VBox>
+    </GridPane>
+</VBox>
