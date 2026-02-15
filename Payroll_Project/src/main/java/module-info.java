@@ -9,4 +9,6 @@ module com.example.payroll_project {
 
     opens com.example.payroll_project to javafx.fxml;
     exports com.example.payroll_project;
+    exports com.example.payroll_project.controller;
+    opens com.example.payroll_project.controller to javafx.fxml;
 }
