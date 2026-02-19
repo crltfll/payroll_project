@@ -1,6 +1,9 @@
 package com.example.payroll_project.controller;
 
+import com.example.payroll_project.dao.AttendanceDAO;
+import com.example.payroll_project.dao.EmployeeDAO;
 import com.example.payroll_project.model.AttendanceRecord;
+import com.example.payroll_project.model.Employee;
 import com.example.payroll_project.util.FA2000CSVParser;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -16,17 +19,19 @@ import java.io.File;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * Attendance Controller (CR1: FA2000 Biometric Attendance Integration)
- * Handles attendance import, validation, and management with F3: Intelligent Validation
+ * Now uses the fixed multi-employee FA2000CSVParser and persists records to SQLite.
  */
 public class AttendanceController {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(AttendanceController.class);
-    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("MMM dd, yyyy");
-    private static final DateTimeFormatter TIME_FORMATTER = DateTimeFormatter.ofPattern("HH:mm");
-    
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM dd, yyyy");
+    private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
+
     @FXML private Label lastImportLabel;
     @FXML private Label lastImportDateLabel;
     @FXML private Label validRecordsLabel;
@@ -47,400 +52,314 @@ public class AttendanceController {
     @FXML private TableColumn<AttendanceRecord, String> regularHoursColumn;
     @FXML private TableColumn<AttendanceRecord, String> overtimeColumn;
     @FXML private TableColumn<AttendanceRecord, String> statusColumn;
-    @FXML private TableColumn<AttendanceRecord, Void> actionsColumn;
+    @FXML private TableColumn<AttendanceRecord, Void>   actionsColumn;
     @FXML private Label pageLabel;
-    
-    private ObservableList<AttendanceRecord> allRecords;
-    private ObservableList<AttendanceRecord> filteredRecords;
-    
+
+    private final AttendanceDAO attDAO  = new AttendanceDAO();
+    private final EmployeeDAO   empDAO  = new EmployeeDAO();
+
+    private final ObservableList<AttendanceRecord> allRecords      = FXCollections.observableArrayList();
+    private final ObservableList<AttendanceRecord> filteredRecords = FXCollections.observableArrayList();
+
     @FXML
     public void initialize() {
-        allRecords = FXCollections.observableArrayList();
-        filteredRecords = FXCollections.observableArrayList();
-        
         setupTableColumns();
-        
-        // Set default date range (current month)
         LocalDate now = LocalDate.now();
         startDatePicker.setValue(now.withDayOfMonth(1));
         endDatePicker.setValue(now);
-        
         attendanceTable.setItems(filteredRecords);
+        loadFromDatabase();
     }
-    
-    private void setupTableColumns() {
-        // Employee Code - for now show "EMPLOYEE" as placeholder
-        employeeCodeColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty("EMP-" + cellData.getValue().getAttendanceDate().getDayOfMonth())
-        );
-        
-        // Employee Name - placeholder
-        employeeNameColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty("Employee " + cellData.getValue().getAttendanceDate().getDayOfMonth())
-        );
-        
-        // Date
-        dateColumn.setCellValueFactory(cellData -> {
-            LocalDate date = cellData.getValue().getAttendanceDate();
-            return new SimpleStringProperty(date != null ? date.format(DATE_FORMATTER) : "-");
-        });
-        
-        // Time In 1
-        timeIn1Column.setCellValueFactory(cellData -> {
-            var time = cellData.getValue().getTimeIn1();
-            return new SimpleStringProperty(time != null ? time.format(TIME_FORMATTER) : "Missed");
-        });
-        
-        // Time Out 1
-        timeOut1Column.setCellValueFactory(cellData -> {
-            var time = cellData.getValue().getTimeOut1();
-            return new SimpleStringProperty(time != null ? time.format(TIME_FORMATTER) : "Missed");
-        });
-        
-        // Time In 2
-        timeIn2Column.setCellValueFactory(cellData -> {
-            var time = cellData.getValue().getTimeIn2();
-            return new SimpleStringProperty(time != null ? time.format(TIME_FORMATTER) : "Missed");
-        });
-        
-        // Time Out 2
-        timeOut2Column.setCellValueFactory(cellData -> {
-            var time = cellData.getValue().getTimeOut2();
-            return new SimpleStringProperty(time != null ? time.format(TIME_FORMATTER) : "Missed");
-        });
-        
-        // Regular Hours - calculated
-        regularHoursColumn.setCellValueFactory(cellData -> {
-            AttendanceRecord record = cellData.getValue();
-            if (record.isAbsent()) {
-                return new SimpleStringProperty("0.0");
-            }
-            
-            // Calculate hours between timeIn1 and timeOut2
-            if (record.getTimeIn1() != null && record.getTimeOut2() != null) {
-                long minutes = java.time.Duration.between(
-                    record.getTimeIn1(), 
-                    record.getTimeOut2()
-                ).toMinutes();
-                
-                // Subtract lunch break if present (assume 1 hour)
-                if (record.getTimeOut1() != null && record.getTimeIn2() != null) {
-                    long lunchMinutes = java.time.Duration.between(
-                        record.getTimeOut1(),
-                        record.getTimeIn2()
-                    ).toMinutes();
-                    minutes -= lunchMinutes;
-                }
-                
-                double hours = minutes / 60.0;
-                return new SimpleStringProperty(String.format("%.1f", hours));
-            }
-            
-            return new SimpleStringProperty("-");
-        });
-        
-        // Overtime - placeholder
-        overtimeColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty("0.0")
-        );
-        
-        // Status with styling
-        statusColumn.setCellValueFactory(cellData -> {
-            AttendanceRecord record = cellData.getValue();
-            if (record.isAbsent()) {
-                return new SimpleStringProperty("ABSENT");
-            } else if (record.isHasAnomaly()) {
-                return new SimpleStringProperty("ANOMALY");
-            } else {
-                return new SimpleStringProperty("PRESENT");
-            }
-        });
-        
-        statusColumn.setCellFactory(column -> new TableCell<AttendanceRecord, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setGraphic(null);
-                    setStyle("");
-                } else {
-                    Label badge = new Label(item);
-                    badge.getStyleClass().add("badge");
-                    
-                    switch (item) {
-                        case "PRESENT":
-                            badge.getStyleClass().add("badge-success");
-                            break;
-                        case "ABSENT":
-                            badge.getStyleClass().add("badge-error");
-                            break;
-                        case "ANOMALY":
-                            badge.getStyleClass().add("badge-warning");
-                            break;
-                    }
-                    
-                    setGraphic(badge);
-                }
-            }
-        });
-        
-        // Actions column
-        actionsColumn.setCellFactory(param -> new TableCell<>() {
-            private final Button viewButton = new Button("View");
-            private final Button editButton = new Button("Edit");
-            private final HBox pane = new HBox(5, viewButton, editButton);
-            
-            {
-                viewButton.getStyleClass().add("button-secondary");
-                viewButton.setStyle("-fx-padding: 4px 12px; -fx-font-size: 11px;");
-                editButton.getStyleClass().add("button-secondary");
-                editButton.setStyle("-fx-padding: 4px 12px; -fx-font-size: 11px;");
-                
-                viewButton.setOnAction(event -> {
-                    AttendanceRecord record = getTableView().getItems().get(getIndex());
-                    handleViewRecord(record);
-                });
-                
-                editButton.setOnAction(event -> {
-                    AttendanceRecord record = getTableView().getItems().get(getIndex());
-                    handleEditRecord(record);
-                });
-            }
-            
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : pane);
-            }
-        });
-    }
-    
+
+    // -----------------------------------------------------------------------
+    // Import
+    // -----------------------------------------------------------------------
+
     @FXML
     private void handleImportCSV() {
-        FileChooser fileChooser = new FileChooser();
-        fileChooser.setTitle("Select FA2000 CSV File");
-        fileChooser.getExtensionFilters().add(
-            new FileChooser.ExtensionFilter("CSV Files", "*.csv")
-        );
-        
-        File file = fileChooser.showOpenDialog(attendanceTable.getScene().getWindow());
-        
-        if (file != null) {
-            importCSVFile(file);
-        }
+        FileChooser fc = new FileChooser();
+        fc.setTitle("Select FA2000 All_Report CSV File");
+        fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("CSV Files", "*.csv"));
+        File file = fc.showOpenDialog(attendanceTable.getScene().getWindow());
+        if (file != null) importCSVFile(file);
     }
-    
+
     private void importCSVFile(File file) {
-        // Show loading indicator
-        Alert loadingAlert = new Alert(Alert.AlertType.INFORMATION);
-        loadingAlert.setTitle("Importing");
-        loadingAlert.setHeaderText("Importing FA2000 CSV...");
-        loadingAlert.setContentText("Please wait while we process the attendance records.\n\nThis may take a moment for large files.");
-        loadingAlert.show();
-        
+        Alert loading = new Alert(Alert.AlertType.INFORMATION);
+        loading.setTitle("Importing");
+        loading.setHeaderText("Processing FA2000 CSV…");
+        loading.setContentText("Parsing attendance records and detecting anomalies (F3). Please wait.");
+        loading.show();
+
         new Thread(() -> {
             try {
-                // Parse CSV using updated parser
-                List<AttendanceRecord> records = FA2000CSVParser.parseCSV(file.getAbsolutePath());
-                
-                javafx.application.Platform.runLater(() -> {
-                    loadingAlert.close();
-                    
-                    if (records.isEmpty()) {
-                        Alert warningAlert = new Alert(Alert.AlertType.WARNING);
-                        warningAlert.setTitle("Import Warning");
-                        warningAlert.setHeaderText("No Records Found");
-                        warningAlert.setContentText("The CSV file did not contain any valid attendance records.\n\nPlease check the file format and try again.");
-                        warningAlert.showAndWait();
-                        return;
+                // Use multi-employee parser
+                Map<String, List<AttendanceRecord>> byEmployee =
+                        FA2000CSVParser.parseAllEmployees(file.getAbsolutePath());
+
+                int total = 0, saved = 0, anomalyCount = 0;
+
+                for (Map.Entry<String, List<AttendanceRecord>> entry : byEmployee.entrySet()) {
+                    String empCode = entry.getKey();
+                    List<AttendanceRecord> records = entry.getValue();
+
+                    // Try to match employee in database
+                    Optional<Employee> empOpt = empDAO.findByEmployeeCode(empCode);
+                    Integer empId = empOpt.map(Employee::getEmployeeId).orElse(null);
+
+                    for (AttendanceRecord rec : records) {
+                        total++;
+                        if (rec.isHasAnomaly()) anomalyCount++;
+
+                        if (empId != null) {
+                            rec.setEmployeeId(empId);
+                            try {
+                                attDAO.upsert(rec);
+                                saved++;
+                            } catch (Exception ex) {
+                                logger.warn("Upsert failed for {}: {}", empCode, ex.getMessage());
+                            }
+                        }
                     }
-                    
-                    // Add records to the list
-                    allRecords.addAll(records);
-                    applyFilters();
-                    
-                    // Update stats
-                    updateStats();
-                    
-                    // Show success message
-                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
-                    successAlert.setTitle("Import Successful");
-                    successAlert.setHeaderText("CSV Import Complete");
-                    successAlert.setContentText(
-                        String.format("Successfully imported %d attendance records.\n\n" +
-                                     "File: %s\n" +
-                                     "Valid Records: %d\n" +
-                                     "Records with Anomalies: %d",
-                                     records.size(),
-                                     file.getName(),
-                                     records.stream().filter(r -> !r.isHasAnomaly()).count(),
-                                     records.stream().filter(AttendanceRecord::isHasAnomaly).count())
-                    );
-                    successAlert.showAndWait();
-                });
-                
-            } catch (Exception e) {
-                logger.error("Failed to import CSV", e);
+                }
+
+                // Also add to in-memory list for display
+                final int totalF = total, savedF = saved, anomF = anomalyCount;
+                final Map<String, List<AttendanceRecord>> byEmpF = byEmployee;
+
                 javafx.application.Platform.runLater(() -> {
-                    loadingAlert.close();
-                    
-                    Alert errorAlert = new Alert(Alert.AlertType.ERROR);
-                    errorAlert.setTitle("Import Failed");
-                    errorAlert.setHeaderText("Failed to import CSV");
-                    errorAlert.setContentText(
-                        "An error occurred while processing the file:\n\n" +
-                        e.getMessage() + "\n\n" +
-                        "Please check that the file is a valid FA2000 attendance export."
-                    );
-                    errorAlert.showAndWait();
+                    loading.close();
+
+                    allRecords.clear();
+                    byEmpF.values().forEach(allRecords::addAll);
+                    applyFilters();
+                    updateStats();
+
+                    Alert success = new Alert(Alert.AlertType.INFORMATION);
+                    success.setTitle("Import Complete");
+                    success.setHeaderText("FA2000 CSV Import Successful");
+                    success.setContentText(String.format(
+                            "Employees found : %d\n"
+                          + "Total records   : %d\n"
+                          + "Saved to DB     : %d\n"
+                          + "Anomalies (F3)  : %d\n\n"
+                          + "(Records without a matching Employee in the database were not saved;\n"
+                          + " add the employee first, then re-import.)",
+                            byEmpF.size(), totalF, savedF, anomF));
+                    success.showAndWait();
+                });
+
+            } catch (Exception e) {
+                logger.error("Import failed", e);
+                javafx.application.Platform.runLater(() -> {
+                    loading.close();
+                    Alert err = new Alert(Alert.AlertType.ERROR);
+                    err.setTitle("Import Failed");
+                    err.setHeaderText("Error processing CSV");
+                    err.setContentText(e.getMessage());
+                    err.showAndWait();
                 });
             }
         }).start();
     }
-    
-    private void updateStats() {
-        long total = allRecords.size();
-        long valid = allRecords.stream().filter(r -> !r.isHasAnomaly()).count();
-        long anomalies = allRecords.stream().filter(AttendanceRecord::isHasAnomaly).count();
-        long absent = allRecords.stream().filter(AttendanceRecord::isAbsent).count();
-        
-        lastImportLabel.setText(total + " records");
-        lastImportDateLabel.setText(LocalDate.now().format(DATE_FORMATTER));
-        validRecordsLabel.setText(String.valueOf(valid));
-        anomaliesLabel.setText(String.valueOf(anomalies));
-        
-        if (total > 0) {
-            double presentRate = ((total - absent) * 100.0) / total;
-            attendanceRateLabel.setText(String.format("%.1f%%", presentRate));
-        }
+
+    // -----------------------------------------------------------------------
+    // Load from DB on initialize
+    // -----------------------------------------------------------------------
+
+    private void loadFromDatabase() {
+        new Thread(() -> {
+            try {
+                LocalDate s = startDatePicker.getValue();
+                LocalDate e = endDatePicker.getValue();
+                List<AttendanceRecord> records = attDAO.findByDateRange(s, e);
+                javafx.application.Platform.runLater(() -> {
+                    allRecords.setAll(records);
+                    applyFilters();
+                    updateStats();
+                });
+            } catch (Exception ex) {
+                logger.error("Load from DB failed", ex);
+            }
+        }).start();
     }
-    
+
+    // -----------------------------------------------------------------------
+    // Table columns
+    // -----------------------------------------------------------------------
+
+    private void setupTableColumns() {
+        employeeCodeColumn.setCellValueFactory(c ->
+                new SimpleStringProperty("EMP-" + c.getValue().getEmployeeId()));
+
+        employeeNameColumn.setCellValueFactory(c -> {
+            Integer id = c.getValue().getEmployeeId();
+            if (id == null) return new SimpleStringProperty("Unknown");
+            // Lazy-load name (cached after first call via EmployeeDAO)
+            try {
+                Optional<Employee> e = empDAO.findById(id);
+                return new SimpleStringProperty(e.map(Employee::getFullName).orElse("ID:" + id));
+            } catch (Exception ex) {
+                return new SimpleStringProperty("ID:" + id);
+            }
+        });
+
+        dateColumn.setCellValueFactory(c -> {
+            LocalDate d = c.getValue().getAttendanceDate();
+            return new SimpleStringProperty(d != null ? d.format(DATE_FMT) : "-");
+        });
+
+        timeIn1Column.setCellValueFactory(c -> {
+            var t = c.getValue().getTimeIn1();
+            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "Missed");
+        });
+        timeOut1Column.setCellValueFactory(c -> {
+            var t = c.getValue().getTimeOut1();
+            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "Missed");
+        });
+        timeIn2Column.setCellValueFactory(c -> {
+            var t = c.getValue().getTimeIn2();
+            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "Missed");
+        });
+        timeOut2Column.setCellValueFactory(c -> {
+            var t = c.getValue().getTimeOut2();
+            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "Missed");
+        });
+
+        regularHoursColumn.setCellValueFactory(c -> {
+            AttendanceRecord r = c.getValue();
+            if (r.isAbsent()) return new SimpleStringProperty("0.0");
+            if (r.getTimeIn1() != null && r.getTimeOut2() != null) {
+                long mins = java.time.Duration.between(r.getTimeIn1(), r.getTimeOut2()).toMinutes();
+                if (r.getTimeOut1() != null && r.getTimeIn2() != null) {
+                    mins -= java.time.Duration.between(r.getTimeOut1(), r.getTimeIn2()).toMinutes();
+                } else if (mins > 300) {
+                    mins -= 60; // deduct default lunch
+                }
+                double reg = Math.min(mins / 60.0, 8.0);
+                return new SimpleStringProperty(String.format("%.1f", reg));
+            }
+            return new SimpleStringProperty("-");
+        });
+
+        overtimeColumn.setCellValueFactory(c -> {
+            AttendanceRecord r = c.getValue();
+            if (r.isAbsent()) return new SimpleStringProperty("0.0");
+            if (r.getTimeIn1() != null && r.getTimeOut2() != null) {
+                long mins = java.time.Duration.between(r.getTimeIn1(), r.getTimeOut2()).toMinutes();
+                if (r.getTimeOut1() != null && r.getTimeIn2() != null) {
+                    mins -= java.time.Duration.between(r.getTimeOut1(), r.getTimeIn2()).toMinutes();
+                } else if (mins > 300) {
+                    mins -= 60;
+                }
+                double ot = Math.max(0, mins / 60.0 - 8.0);
+                return new SimpleStringProperty(ot > 0 ? String.format("%.1f", ot) : "0.0");
+            }
+            return new SimpleStringProperty("0.0");
+        });
+
+        statusColumn.setCellValueFactory(c -> {
+            AttendanceRecord r = c.getValue();
+            if (r.isAbsent()) return new SimpleStringProperty("ABSENT");
+            if (r.isHasAnomaly()) return new SimpleStringProperty("ANOMALY");
+            return new SimpleStringProperty("PRESENT");
+        });
+        statusColumn.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setGraphic(null); return; }
+                Label b = new Label(item);
+                b.getStyleClass().add("badge");
+                b.getStyleClass().add(switch (item) {
+                    case "PRESENT" -> "badge-success";
+                    case "ABSENT"  -> "badge-error";
+                    default        -> "badge-warning";
+                });
+                setGraphic(b);
+            }
+        });
+
+        actionsColumn.setCellFactory(col -> new TableCell<>() {
+            private final Button viewBtn = new Button("View");
+            private final Button editBtn = new Button("Edit");
+            @Override protected void updateItem(Void v, boolean empty) {
+                super.updateItem(v, empty);
+                if (empty) { setGraphic(null); return; }
+                viewBtn.getStyleClass().add("button-secondary");
+                viewBtn.setStyle("-fx-padding:4px 10px;-fx-font-size:11px;");
+                editBtn.getStyleClass().add("button-secondary");
+                editBtn.setStyle("-fx-padding:4px 10px;-fx-font-size:11px;");
+                AttendanceRecord r = getTableView().getItems().get(getIndex());
+                viewBtn.setOnAction(e -> showDetail(r));
+                editBtn.setOnAction(e -> showInfoAlert("Edit",
+                        "Manual editing of attendance records (F10) will be available in a future release."));
+                setGraphic(new HBox(5, viewBtn, editBtn));
+            }
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // Filters & stats
+    // -----------------------------------------------------------------------
+
+    @FXML private void handleApplyDateFilter() { loadFromDatabase(); }
+    @FXML private void handleFilterToday()     { LocalDate t = LocalDate.now(); startDatePicker.setValue(t); endDatePicker.setValue(t); loadFromDatabase(); }
+    @FXML private void handleFilterThisWeek()  { LocalDate n = LocalDate.now(); startDatePicker.setValue(n.minusDays(n.getDayOfWeek().getValue()-1)); endDatePicker.setValue(n); loadFromDatabase(); }
+    @FXML private void handleFilterThisMonth() { LocalDate n = LocalDate.now(); startDatePicker.setValue(n.withDayOfMonth(1)); endDatePicker.setValue(n); loadFromDatabase(); }
+    @FXML private void handleFilterAnomalies() { applyFilters(); }
+    @FXML private void handleRefresh()         { loadFromDatabase(); }
+    @FXML private void handleValidateAll()     { showInfoAlert("Validate","Anomaly detection runs automatically during import (F3). Check yellow badges for flagged records."); }
+    @FXML private void handleExport()          { showInfoAlert("Export","Report export will be implemented in a future update."); }
+    @FXML private void handlePreviousPage()    { /* TODO pagination */ }
+    @FXML private void handleNextPage()        { /* TODO pagination */ }
+
     private void applyFilters() {
         filteredRecords.clear();
-        
-        LocalDate startDate = startDatePicker.getValue();
-        LocalDate endDate = endDatePicker.getValue();
-        boolean anomaliesOnly = showAnomaliesOnly.isSelected();
-        
-        for (AttendanceRecord record : allRecords) {
-            // Date filter
-            if (startDate != null && record.getAttendanceDate().isBefore(startDate)) {
-                continue;
-            }
-            if (endDate != null && record.getAttendanceDate().isAfter(endDate)) {
-                continue;
-            }
-            
-            // Anomaly filter
-            if (anomaliesOnly && !record.isHasAnomaly()) {
-                continue;
-            }
-            
-            filteredRecords.add(record);
+        LocalDate s  = startDatePicker.getValue();
+        LocalDate e  = endDatePicker.getValue();
+        boolean ano  = showAnomaliesOnly.isSelected();
+        for (AttendanceRecord r : allRecords) {
+            if (s != null && r.getAttendanceDate().isBefore(s)) continue;
+            if (e != null && r.getAttendanceDate().isAfter(e))  continue;
+            if (ano && !r.isHasAnomaly()) continue;
+            filteredRecords.add(r);
         }
-        
         recordCountLabel.setText(filteredRecords.size() + " records");
     }
-    
-    @FXML
-    private void handleExport() {
-        showInfoAlert("Export", "Export functionality will be implemented in a future update.");
+
+    private void updateStats() {
+        long total    = allRecords.size();
+        long valid    = allRecords.stream().filter(r -> !r.isHasAnomaly()).count();
+        long anomalies = allRecords.stream().filter(AttendanceRecord::isHasAnomaly).count();
+        long absent   = allRecords.stream().filter(AttendanceRecord::isAbsent).count();
+
+        lastImportLabel.setText(total + " records");
+        lastImportDateLabel.setText(LocalDate.now().format(DATE_FMT));
+        validRecordsLabel.setText(String.valueOf(valid));
+        anomaliesLabel.setText(String.valueOf(anomalies));
+        attendanceRateLabel.setText(total > 0
+                ? String.format("%.1f%%", (total - absent) * 100.0 / total) : "0%");
     }
-    
-    @FXML
-    private void handleApplyDateFilter() {
-        applyFilters();
+
+    private void showDetail(AttendanceRecord r) {
+        Alert a = new Alert(Alert.AlertType.INFORMATION);
+        a.setTitle("Attendance Details");
+        a.setHeaderText("Record for " + r.getAttendanceDate().format(DATE_FMT));
+        StringBuilder sb = new StringBuilder();
+        sb.append("Date    : ").append(r.getAttendanceDate().format(DATE_FMT)).append("\n\n");
+        sb.append("In      : ").append(r.getTimeIn1()  != null ? r.getTimeIn1().format(TIME_FMT)  : "Missed").append("\n");
+        sb.append("Lunch ✕ : ").append(r.getTimeOut1() != null ? r.getTimeOut1().format(TIME_FMT) : "Missed").append("\n");
+        sb.append("Lunch → : ").append(r.getTimeIn2()  != null ? r.getTimeIn2().format(TIME_FMT)  : "Missed").append("\n");
+        sb.append("Out     : ").append(r.getTimeOut2() != null ? r.getTimeOut2().format(TIME_FMT) : "Missed").append("\n\n");
+        if (r.isAbsent())       sb.append("Status  : ABSENT\n");
+        else if (r.isHasAnomaly()) sb.append("Status  : ANOMALY – ").append(r.getAnomalyDescription()).append("\n");
+        else                    sb.append("Status  : PRESENT\n");
+        a.setContentText(sb.toString());
+        a.showAndWait();
     }
-    
-    @FXML
-    private void handleFilterToday() {
-        LocalDate today = LocalDate.now();
-        startDatePicker.setValue(today);
-        endDatePicker.setValue(today);
-        applyFilters();
-    }
-    
-    @FXML
-    private void handleFilterThisWeek() {
-        LocalDate now = LocalDate.now();
-        startDatePicker.setValue(now.minusDays(now.getDayOfWeek().getValue() - 1));
-        endDatePicker.setValue(now);
-        applyFilters();
-    }
-    
-    @FXML
-    private void handleFilterThisMonth() {
-        LocalDate now = LocalDate.now();
-        startDatePicker.setValue(now.withDayOfMonth(1));
-        endDatePicker.setValue(now);
-        applyFilters();
-    }
-    
-    @FXML
-    private void handleFilterAnomalies() {
-        applyFilters();
-    }
-    
-    @FXML
-    private void handleValidateAll() {
-        showInfoAlert("Validate All", 
-            "All records have been validated during import.\n\n" +
-            "Records with anomalies are marked with WARNING status.\n" +
-            "Use the filter to show only anomalies.");
-    }
-    
-    @FXML
-    private void handleRefresh() {
-        applyFilters();
-    }
-    
-    @FXML
-    private void handlePreviousPage() {
-        // Pagination implementation - TODO
-    }
-    
-    @FXML
-    private void handleNextPage() {
-        // Pagination implementation - TODO
-    }
-    
-    private void handleViewRecord(AttendanceRecord record) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("Attendance Details");
-        alert.setHeaderText("Attendance for " + record.getAttendanceDate().format(DATE_FORMATTER));
-        
-        StringBuilder content = new StringBuilder();
-        content.append("Date: ").append(record.getAttendanceDate().format(DATE_FORMATTER)).append("\n\n");
-        content.append("Morning In: ").append(record.getTimeIn1() != null ? record.getTimeIn1().format(TIME_FORMATTER) : "Missed").append("\n");
-        content.append("Lunch Out: ").append(record.getTimeOut1() != null ? record.getTimeOut1().format(TIME_FORMATTER) : "Missed").append("\n");
-        content.append("Lunch In: ").append(record.getTimeIn2() != null ? record.getTimeIn2().format(TIME_FORMATTER) : "Missed").append("\n");
-        content.append("Evening Out: ").append(record.getTimeOut2() != null ? record.getTimeOut2().format(TIME_FORMATTER) : "Missed").append("\n\n");
-        
-        if (record.isAbsent()) {
-            content.append("Status: ABSENT\n");
-        } else if (record.isHasAnomaly()) {
-            content.append("Status: ANOMALY DETECTED\n");
-            content.append("Details: ").append(record.getAnomalyDescription()).append("\n");
-        } else {
-            content.append("Status: PRESENT\n");
-        }
-        
-        alert.setContentText(content.toString());
-        alert.showAndWait();
-    }
-    
-    private void handleEditRecord(AttendanceRecord record) {
-        showInfoAlert("Edit Record", 
-            "Manual editing will be available in a future update.\n\n" +
-            "This feature allows authorized users to correct attendance anomalies.");
-    }
-    
-    private void showInfoAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+
+    private void showInfoAlert(String title, String msg) {
+        Alert a = new Alert(Alert.AlertType.INFORMATION);
+        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
     }
 }

@@ -24,258 +24,223 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Locale;
-import java.util.Optional;
 
 /**
  * Employees Controller (F9: Employee Management System)
- * Handles employee CRUD operations and display
+ * Handles CRUD operations with working edit functionality.
  */
 public class EmployeesController {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(EmployeesController.class);
-    private static final NumberFormat currencyFormat = NumberFormat.getCurrencyInstance(new Locale("en", "PH"));
-    private static final DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMM dd, yyyy");
-    
-    @FXML
-    private TextField searchField;
-    
-    @FXML
-    private ComboBox<Employee.EmploymentType> employmentTypeFilter;
-    
-    @FXML
-    private ComboBox<String> departmentFilter;
-    
-    @FXML
-    private CheckBox activeOnlyCheckbox;
-    
-    @FXML
-    private Label employeeCountLabel;
-    
-    @FXML
-    private TableView<Employee> employeeTable;
-    
-    @FXML
-    private TableColumn<Employee, String> codeColumn;
-    
-    @FXML
-    private TableColumn<Employee, String> nameColumn;
-    
-    @FXML
-    private TableColumn<Employee, String> positionColumn;
-    
-    @FXML
-    private TableColumn<Employee, String> departmentColumn;
-    
-    @FXML
-    private TableColumn<Employee, String> employmentTypeColumn;
-    
-    @FXML
-    private TableColumn<Employee, String> baseRateColumn;
-    
-    @FXML
-    private TableColumn<Employee, String> dateHiredColumn;
-    
-    @FXML
-    private TableColumn<Employee, String> statusColumn;
-    
-    @FXML
-    private TableColumn<Employee, Void> actionsColumn;
-    
-    @FXML
-    private Label pageLabel;
-    
-    private EmployeeDAO employeeDAO;
-    private ObservableList<Employee> employees;
-    
+    private static final NumberFormat CURRENCY = NumberFormat.getCurrencyInstance(new Locale("en", "PH"));
+    private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM dd, yyyy");
+
+    @FXML private TextField searchField;
+    @FXML private ComboBox<Employee.EmploymentType> employmentTypeFilter;
+    @FXML private ComboBox<String> departmentFilter;
+    @FXML private CheckBox activeOnlyCheckbox;
+    @FXML private Label employeeCountLabel;
+    @FXML private TableView<Employee> employeeTable;
+    @FXML private TableColumn<Employee, String> codeColumn;
+    @FXML private TableColumn<Employee, String> nameColumn;
+    @FXML private TableColumn<Employee, String> positionColumn;
+    @FXML private TableColumn<Employee, String> departmentColumn;
+    @FXML private TableColumn<Employee, String> employmentTypeColumn;
+    @FXML private TableColumn<Employee, String> baseRateColumn;
+    @FXML private TableColumn<Employee, String> dateHiredColumn;
+    @FXML private TableColumn<Employee, String> statusColumn;
+    @FXML private TableColumn<Employee, Void>   actionsColumn;
+    @FXML private Label pageLabel;
+
+    private final EmployeeDAO employeeDAO = new EmployeeDAO();
+    private final ObservableList<Employee> employees = FXCollections.observableArrayList();
+
     @FXML
     public void initialize() {
-        employeeDAO = new EmployeeDAO();
-        employees = FXCollections.observableArrayList();
-        
-        // Initialize filters
         initializeFilters();
-        
-        // Setup table columns
         setupTableColumns();
-        
-        // Load employees
         loadEmployees();
     }
-    
-    /**
-     * Initialize filter combo boxes
-     */
+
     private void initializeFilters() {
-        // Employment type filter
         employmentTypeFilter.getItems().addAll(Employee.EmploymentType.values());
-        
-        // Department filter - would be loaded from database in production
         departmentFilter.getItems().addAll(
-            "All Departments",
-            "Administration",
-            "Faculty",
-            "IT Department",
-            "Finance",
-            "Human Resources"
-        );
+                "All Departments", "Administration", "Faculty",
+                "IT Department", "Finance", "Human Resources");
         departmentFilter.setValue("All Departments");
     }
-    
-    /**
-     * Setup table columns
-     */
+
     private void setupTableColumns() {
-        // Employee Code
         codeColumn.setCellValueFactory(new PropertyValueFactory<>("employeeCode"));
-        
-        // Full Name
-        nameColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getFullName())
-        );
-        
-        // Position
+        nameColumn.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getFullName()));
         positionColumn.setCellValueFactory(new PropertyValueFactory<>("position"));
-        
-        // Department
         departmentColumn.setCellValueFactory(new PropertyValueFactory<>("department"));
-        
-        // Employment Type
-        employmentTypeColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().getEmploymentType().name()
-                .replace("_", " "))
-        );
-        
-        // Base Rate
-        baseRateColumn.setCellValueFactory(cellData -> {
-            Employee emp = cellData.getValue();
-            String rate = currencyFormat.format(emp.getBaseRate()) + 
-                         "/" + emp.getRateType().name().toLowerCase();
-            return new SimpleStringProperty(rate);
+        employmentTypeColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().getEmploymentType().name().replace("_", " ")));
+        baseRateColumn.setCellValueFactory(c -> {
+            Employee e = c.getValue();
+            return new SimpleStringProperty(
+                    CURRENCY.format(e.getBaseRate()) + "/" + e.getRateType().name().toLowerCase());
         });
-        
-        // Date Hired
-        dateHiredColumn.setCellValueFactory(cellData -> {
-            LocalDate date = cellData.getValue().getDateHired();
-            return new SimpleStringProperty(date != null ? date.format(dateFormatter) : "");
+        dateHiredColumn.setCellValueFactory(c -> {
+            LocalDate d = c.getValue().getDateHired();
+            return new SimpleStringProperty(d != null ? d.format(DATE_FMT) : "");
         });
-        
-        // Status
-        statusColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(cellData.getValue().isActive() ? "Active" : "Inactive")
-        );
-        statusColumn.setCellFactory(column -> new TableCell<Employee, String>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
+
+        // Status badge
+        statusColumn.setCellValueFactory(c ->
+                new SimpleStringProperty(c.getValue().isActive() ? "Active" : "Inactive"));
+        statusColumn.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
-                if (empty || item == null) {
-                    setText(null);
-                    setGraphic(null);
-                    setStyle("");
-                } else {
-                    Label badge = new Label(item);
-                    badge.getStyleClass().add("badge");
-                    if (item.equals("Active")) {
-                        badge.getStyleClass().add("badge-success");
-                    } else {
-                        badge.getStyleClass().add("badge-error");
-                    }
-                    setGraphic(badge);
-                }
+                if (empty || item == null) { setGraphic(null); return; }
+                Label badge = new Label(item);
+                badge.getStyleClass().addAll("badge",
+                        "Active".equals(item) ? "badge-success" : "badge-error");
+                setGraphic(badge);
             }
         });
-        
-        // Actions
-        actionsColumn.setCellFactory(param -> new TableCell<>() {
-            private final Button editButton = new Button("Edit");
-            private final Button deleteButton = new Button("Delete");
-            private final HBox pane = new HBox(5, editButton, deleteButton);
-            
+
+        // Actions column with working Edit
+        actionsColumn.setCellFactory(col -> new TableCell<>() {
+            private final Button editBtn   = new Button("Edit");
+            private final Button deleteBtn = new Button("Delete");
+
             {
-                editButton.getStyleClass().add("button-secondary");
-                editButton.setStyle("-fx-padding: 4px 12px; -fx-font-size: 11px;");
-                deleteButton.getStyleClass().add("button-danger");
-                deleteButton.setStyle("-fx-padding: 4px 12px; -fx-font-size: 11px;");
-                
-                editButton.setOnAction(event -> {
-                    Employee employee = getTableView().getItems().get(getIndex());
-                    handleEditEmployee(employee);
+                editBtn.getStyleClass().add("button-secondary");
+                editBtn.setStyle("-fx-padding:4px 12px;-fx-font-size:11px;");
+                deleteBtn.getStyleClass().add("button-danger");
+                deleteBtn.setStyle("-fx-padding:4px 12px;-fx-font-size:11px;");
+
+                editBtn.setOnAction(e -> {
+                    Employee emp = getTableView().getItems().get(getIndex());
+                    openEmployeeForm(emp);
                 });
-                
-                deleteButton.setOnAction(event -> {
-                    Employee employee = getTableView().getItems().get(getIndex());
-                    handleDeleteEmployee(employee);
+                deleteBtn.setOnAction(e -> {
+                    Employee emp = getTableView().getItems().get(getIndex());
+                    handleDeleteEmployee(emp);
                 });
             }
-            
-            @Override
-            protected void updateItem(Void item, boolean empty) {
-                super.updateItem(item, empty);
-                setGraphic(empty ? null : pane);
+
+            @Override protected void updateItem(Void v, boolean empty) {
+                super.updateItem(v, empty);
+                setGraphic(empty ? null : new HBox(5, editBtn, deleteBtn));
             }
         });
     }
-    
+
+    // -----------------------------------------------------------------------
+    // CRUD operations
+    // -----------------------------------------------------------------------
+
+    @FXML
+    private void handleAddEmployee() {
+        openEmployeeForm(null);
+    }
+
     /**
-     * Load employees from database
+     * Opens the employee form dialog.
+     * @param employee null = add new, non-null = edit existing
      */
+    private void openEmployeeForm(Employee employee) {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/employee-form.fxml"));
+            Scene scene = new Scene(loader.load());
+            scene.getStylesheets().add(
+                    getClass().getResource("/css/styles.css").toExternalForm());
+
+            EmployeeFormController ctrl = loader.getController();
+            if (employee != null) {
+                ctrl.setEmployee(employee);
+            }
+
+            Stage stage = new Stage();
+            stage.setTitle(employee == null ? "Add Employee" : "Edit Employee – " + employee.getFullName());
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.showAndWait();
+
+            // Refresh table regardless (controller auto-saves on "Save")
+            loadEmployees();
+
+        } catch (IOException e) {
+            logger.error("Failed to open employee form", e);
+            showErrorAlert("Error", "Failed to open form: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleDeleteEmployee(Employee employee) {
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Deactivate Employee");
+        confirm.setHeaderText("Deactivate " + employee.getFullName() + "?");
+        confirm.setContentText("The employee record will be deactivated (soft delete). "
+                + "Payroll history is preserved.");
+        confirm.showAndWait().ifPresent(r -> {
+            if (r == ButtonType.OK) {
+                new Thread(() -> {
+                    try {
+                        employeeDAO.delete(employee.getEmployeeId());
+                        Platform.runLater(() -> {
+                            showInfoAlert("Success", employee.getFullName() + " deactivated.");
+                            loadEmployees();
+                        });
+                    } catch (SQLException ex) {
+                        logger.error("Delete failed", ex);
+                        Platform.runLater(() ->
+                                showErrorAlert("Error", "Failed to deactivate: " + ex.getMessage()));
+                    }
+                }).start();
+            }
+        });
+    }
+
+    // -----------------------------------------------------------------------
+    // Loading & filtering
+    // -----------------------------------------------------------------------
+
     private void loadEmployees() {
         new Thread(() -> {
             try {
                 boolean activeOnly = activeOnlyCheckbox.isSelected();
-                List<Employee> employeeList = employeeDAO.findAll(activeOnly);
-                
+                List<Employee> list = employeeDAO.findAll(activeOnly);
                 Platform.runLater(() -> {
-                    employees.setAll(employeeList);
+                    employees.setAll(list);
                     employeeTable.setItems(employees);
-                    updateEmployeeCount();
+                    updateCount();
                 });
-                
             } catch (SQLException e) {
-                logger.error("Failed to load employees", e);
-                Platform.runLater(() -> showErrorAlert("Database Error", 
-                    "Failed to load employees: " + e.getMessage()));
+                logger.error("Load failed", e);
+                Platform.runLater(() ->
+                        showErrorAlert("Database Error", "Failed to load employees: " + e.getMessage()));
             }
         }).start();
     }
-    
-    /**
-     * Update employee count label
-     */
-    private void updateEmployeeCount() {
-        int count = employees.size();
-        employeeCountLabel.setText(count + " employee" + (count != 1 ? "s" : ""));
-    }
-    
+
     @FXML
     private void handleSearch() {
-        String searchTerm = searchField.getText().trim();
-        if (searchTerm.isEmpty()) {
-            loadEmployees();
-            return;
-        }
-        
+        String term = searchField.getText().trim();
+        if (term.isEmpty()) { loadEmployees(); return; }
         new Thread(() -> {
             try {
-                List<Employee> results = employeeDAO.search(searchTerm);
-                
+                List<Employee> results = employeeDAO.search(term);
                 Platform.runLater(() -> {
                     employees.setAll(results);
                     employeeTable.setItems(employees);
-                    updateEmployeeCount();
+                    updateCount();
                 });
-                
             } catch (SQLException e) {
                 logger.error("Search failed", e);
             }
         }).start();
     }
-    
-    @FXML
-    private void handleFilter() {
-        // Implementation would filter based on selected filters
-        loadEmployees();
-    }
-    
+
+    @FXML private void handleFilter()       { loadEmployees(); }
+    @FXML private void handleRefresh()      { loadEmployees(); }
+    @FXML private void handlePreviousPage() { /* pagination – TODO */ }
+    @FXML private void handleNextPage()     { /* pagination – TODO */ }
+
     @FXML
     private void handleClearFilters() {
         searchField.clear();
@@ -284,102 +249,25 @@ public class EmployeesController {
         activeOnlyCheckbox.setSelected(true);
         loadEmployees();
     }
-    
-    @FXML
-    private void handleAddEmployee() {
-        try {
-            FXMLLoader loader = new FXMLLoader(
-                getClass().getResource("/fxml/employee-form.fxml")
-            );
-            Scene scene = new Scene(loader.load());
-            scene.getStylesheets().add(
-                getClass().getResource("/css/styles.css").toExternalForm()
-            );
-            
-            Stage stage = new Stage();
-            stage.setTitle("Add Employee");
-            stage.setScene(scene);
-            stage.initModality(Modality.APPLICATION_MODAL);
-            stage.showAndWait();
-            
-            // Refresh after closing
-            loadEmployees();
-            
-        } catch (IOException e) {
-            logger.error("Failed to open add employee form", e);
-            showErrorAlert("Error", "Failed to open form: " + e.getMessage());
-        }
-    }
-    
-    @FXML
-    private void handleEditEmployee(Employee employee) {
-        // Implementation would open edit form
-        showInfoAlert("Edit Employee", "Edit functionality will open form for: " + 
-                     employee.getFullName());
-    }
-    
-    @FXML
-    private void handleDeleteEmployee(Employee employee) {
-        Alert confirmation = new Alert(Alert.AlertType.CONFIRMATION);
-        confirmation.setTitle("Delete Employee");
-        confirmation.setHeaderText("Delete " + employee.getFullName() + "?");
-        confirmation.setContentText("This will deactivate the employee. This action can be undone.");
-        
-        confirmation.showAndWait().ifPresent(response -> {
-            if (response == ButtonType.OK) {
-                new Thread(() -> {
-                    try {
-                        employeeDAO.delete(employee.getEmployeeId());
-                        Platform.runLater(() -> {
-                            showInfoAlert("Success", "Employee deactivated successfully");
-                            loadEmployees();
-                        });
-                    } catch (SQLException e) {
-                        logger.error("Failed to delete employee", e);
-                        Platform.runLater(() -> 
-                            showErrorAlert("Error", "Failed to delete employee: " + e.getMessage())
-                        );
-                    }
-                }).start();
-            }
-        });
-    }
-    
+
     @FXML
     private void handleExport() {
-        showInfoAlert("Export", "Export functionality will be implemented");
+        showInfoAlert("Export", "Export to CSV will be implemented in a future update.");
     }
-    
-    @FXML
-    private void handleRefresh() {
-        loadEmployees();
+
+    private void updateCount() {
+        int n = employees.size();
+        employeeCountLabel.setText(n + " employee" + (n != 1 ? "s" : ""));
+        pageLabel.setText("Page 1 of 1");
     }
-    
-    @FXML
-    private void handlePreviousPage() {
-        // Pagination implementation
-        //TODO
+
+    // -----------------------------------------------------------------------
+    private void showErrorAlert(String title, String msg) {
+        Alert a = new Alert(Alert.AlertType.ERROR);
+        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
     }
-    
-    @FXML
-    private void handleNextPage() {
-        // Pagination implementation
-        //TODO
-    }
-    
-    private void showErrorAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
-    }
-    
-    private void showInfoAlert(String title, String message) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(title);
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
+    private void showInfoAlert(String title, String msg) {
+        Alert a = new Alert(Alert.AlertType.INFORMATION);
+        a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();
     }
 }

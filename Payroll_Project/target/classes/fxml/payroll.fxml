@@ -6,6 +6,7 @@
 
 <VBox xmlns="http://javafx.com/javafx/21"
       xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.payroll_project.controller.PayrollController"
       spacing="24">
     
     <HBox alignment="CENTER_LEFT" spacing="20">
@@ -18,8 +19,10 @@
         <Region HBox.hgrow="ALWAYS"/>
         
         <HBox spacing="10">
-            <Button text="Create Pay Period" styleClass="button-secondary"/>
-            <Button text="Process Payroll" styleClass="button-primary"/>
+            <Button text="Create Pay Period" styleClass="button-secondary"
+                    onAction="#handleCreatePayPeriod"/>
+            <Button text="Process Payroll" styleClass="button-primary"
+                    onAction="#handleProcessPayroll"/>
         </HBox>
     </HBox>
     
@@ -36,6 +39,7 @@
             <Label text="• Individual payslip generation"/>
         </VBox>
         <Button text="Start Processing" styleClass="button-primary" 
-                style="-fx-padding: 12px 32px; -fx-margin-top: 20px;"/>
+                style="-fx-padding: 12px 32px; -fx-margin-top: 20px;"
+                onAction="#handleStartProcessing"/>
     </VBox>
 </VBox>
