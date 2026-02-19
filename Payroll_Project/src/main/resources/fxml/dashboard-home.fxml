@@ -19,11 +19,6 @@
         </VBox>
         
         <Region HBox.hgrow="ALWAYS"/>
-        
-        <HBox spacing="10">
-            <Button text="Download Report" styleClass="button-secondary"/>
-            <Button text="Process Payroll" styleClass="button-primary"/>
-        </HBox>
     </HBox>
     
     <!-- Stats Cards Row -->
@@ -107,10 +102,14 @@
                     <TableColumn text="Time Out" prefWidth="80"/>
                     <TableColumn text="Hours" prefWidth="60"/>
                 </columns>
+                <placeholder>
+                    <Label text="No recent attendance records" styleClass="card-subtitle"
+                           style="-fx-padding: 20px;"/>
+                </placeholder>
             </TableView>
         </VBox>
         
-        <!-- Quick Actions Card -->
+        <!-- Quick Actions Card — buttons wired via DashboardHomeController -->
         <VBox styleClass="card" spacing="16" GridPane.columnIndex="1" GridPane.rowIndex="0">
             <VBox styleClass="card-header" spacing="8">
                 <Label text="Quick Actions" styleClass="card-title"/>
@@ -118,16 +117,21 @@
             </VBox>
             
             <VBox spacing="10">
-                <Button text="Import FA2000 CSV" maxWidth="Infinity" 
-                        styleClass="button-primary" style="-fx-padding: 12px;"/>
-                <Button text="Add New Employee" maxWidth="Infinity" 
-                        styleClass="button-secondary" style="-fx-padding: 12px;"/>
-                <Button text="Create Pay Period" maxWidth="Infinity" 
-                        styleClass="button-secondary" style="-fx-padding: 12px;"/>
-                <Button text="Generate Payslips" maxWidth="Infinity" 
-                        styleClass="button-secondary" style="-fx-padding: 12px;"/>
-                <Button text="View Reports" maxWidth="Infinity" 
-                        styleClass="button-secondary" style="-fx-padding: 12px;"/>
+                <Button text="📥  Import FA2000 CSV" maxWidth="Infinity" 
+                        styleClass="button-primary" style="-fx-padding: 12px;"
+                        onAction="#handleQuickImportCSV"/>
+                <Button text="👤  Add New Employee" maxWidth="Infinity" 
+                        styleClass="button-secondary" style="-fx-padding: 12px;"
+                        onAction="#handleQuickAddEmployee"/>
+                <Button text="📅  Create Pay Period" maxWidth="Infinity" 
+                        styleClass="button-secondary" style="-fx-padding: 12px;"
+                        onAction="#handleQuickCreatePayPeriod"/>
+                <Button text="⚙️  Process Payroll" maxWidth="Infinity" 
+                        styleClass="button-secondary" style="-fx-padding: 12px;"
+                        onAction="#handleQuickProcessPayroll"/>
+                <Button text="📊  View Reports" maxWidth="Infinity" 
+                        styleClass="button-secondary" style="-fx-padding: 12px;"
+                        onAction="#handleQuickViewReports"/>
             </VBox>
         </VBox>
         
