@@ -18,13 +18,13 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 /**
  * Attendance Controller (CR1: FA2000 Biometric Attendance Integration)
- * Now uses the fixed multi-employee FA2000CSVParser and persists records to SQLite.
+ *
+ * FIX: Employee-code matching now tries multiple formats so that a device
+ *      ID of "7" will match database codes "EMP007", "007", "07", or "7".
  */
 public class AttendanceController {
 
@@ -93,19 +93,32 @@ public class AttendanceController {
 
         new Thread(() -> {
             try {
-                // Use multi-employee parser
                 Map<String, List<AttendanceRecord>> byEmployee =
                         FA2000CSVParser.parseAllEmployees(file.getAbsolutePath());
 
                 int total = 0, saved = 0, anomalyCount = 0;
+                // Track unmatched so we can tell the user exactly what codes to use
+                List<String> unmatchedDetails = new ArrayList<>();
 
                 for (Map.Entry<String, List<AttendanceRecord>> entry : byEmployee.entrySet()) {
-                    String empCode = entry.getKey();
+                    String parsedCode = entry.getKey();          // e.g. "EMP007"
                     List<AttendanceRecord> records = entry.getValue();
 
-                    // Try to match employee in database
-                    Optional<Employee> empOpt = empDAO.findByEmployeeCode(empCode);
+                    // --- FIX: Try several code variants ----------------------------
+                    Optional<Employee> empOpt = resolveEmployee(parsedCode);
+                    // ---------------------------------------------------------------
+
                     Integer empId = empOpt.map(Employee::getEmployeeId).orElse(null);
+
+                    if (empId == null) {
+                        // Build a helpful message listing all codes we tried
+                        String tried = String.join(", ", buildCodeCandidates(parsedCode));
+                        unmatchedDetails.add(
+                                "  • CSV device ID → " + parsedCode
+                                + "\n    Tried codes: " + tried
+                                + "\n    → Register the employee with one of these codes, then re-import.");
+                        logger.warn("No employee matched for parsed code '{}'. Tried: {}", parsedCode, tried);
+                    }
 
                     for (AttendanceRecord rec : records) {
                         total++;
@@ -117,15 +130,15 @@ public class AttendanceController {
                                 attDAO.upsert(rec);
                                 saved++;
                             } catch (Exception ex) {
-                                logger.warn("Upsert failed for {}: {}", empCode, ex.getMessage());
+                                logger.warn("Upsert failed for {}: {}", parsedCode, ex.getMessage());
                             }
                         }
                     }
                 }
 
-                // Also add to in-memory list for display
                 final int totalF = total, savedF = saved, anomF = anomalyCount;
                 final Map<String, List<AttendanceRecord>> byEmpF = byEmployee;
+                final List<String> unmatchedF = unmatchedDetails;
 
                 javafx.application.Platform.runLater(() -> {
                     loading.close();
@@ -135,18 +148,33 @@ public class AttendanceController {
                     applyFilters();
                     updateStats();
 
-                    Alert success = new Alert(Alert.AlertType.INFORMATION);
-                    success.setTitle("Import Complete");
-                    success.setHeaderText("FA2000 CSV Import Successful");
-                    success.setContentText(String.format(
+                    StringBuilder msg = new StringBuilder();
+                    msg.append(String.format(
                             "Employees found : %d\n"
                           + "Total records   : %d\n"
                           + "Saved to DB     : %d\n"
-                          + "Anomalies (F3)  : %d\n\n"
-                          + "(Records without a matching Employee in the database were not saved;\n"
-                          + " add the employee first, then re-import.)",
+                          + "Anomalies (F3)  : %d\n",
                             byEmpF.size(), totalF, savedF, anomF));
-                    success.showAndWait();
+
+                    if (!unmatchedF.isEmpty()) {
+                        msg.append("\n⚠️  UNMATCHED EMPLOYEES (records NOT saved):\n");
+                        unmatchedF.forEach(msg::append);
+                        msg.append("\n\nQuick fix: open the employee record and set the\n"
+                                 + "Employee Code field to the value shown above, then re-import.");
+                    } else {
+                        msg.append("\n✅ All employees matched successfully.");
+                    }
+
+                    Alert result = new Alert(
+                            unmatchedF.isEmpty()
+                                ? Alert.AlertType.INFORMATION
+                                : Alert.AlertType.WARNING);
+                    result.setTitle("Import Complete");
+                    result.setHeaderText("FA2000 CSV Import " + (unmatchedF.isEmpty() ? "Successful" : "— Action Required"));
+                    result.setContentText(msg.toString());
+                    // Make dialog wide enough to read the details
+                    result.getDialogPane().setMinWidth(560);
+                    result.showAndWait();
                 });
 
             } catch (Exception e) {
@@ -161,6 +189,60 @@ public class AttendanceController {
                 });
             }
         }).start();
+    }
+
+    // -----------------------------------------------------------------------
+    // Employee code resolution  (THE FIX)
+    // -----------------------------------------------------------------------
+
+    /**
+     * The FA2000 parser always generates codes like "EMP007" from device ID "7".
+     * Users may have registered the employee with any of several formats.
+     * This method tries them all in order of likelihood.
+     *
+     * Candidates tried for device ID "7" / parsed code "EMP007":
+     *   1. EMP007   (what the parser generates)
+     *   2. 7        (raw numeric – most common manual entry)
+     *   3. 07       (zero-padded 2-digit)
+     *   4. 007      (zero-padded 3-digit)
+     *   5. EMP7     (no padding variant)
+     *   6. EMP07    (2-digit padded variant)
+     */
+    private Optional<Employee> resolveEmployee(String parsedCode) throws java.sql.SQLException {
+        for (String candidate : buildCodeCandidates(parsedCode)) {
+            Optional<Employee> found = empDAO.findByEmployeeCode(candidate);
+            if (found.isPresent()) {
+                logger.info("Matched '{}' via candidate code '{}'", parsedCode, candidate);
+                return found;
+            }
+        }
+        return Optional.empty();
+    }
+
+    private List<String> buildCodeCandidates(String parsedCode) {
+        List<String> candidates = new ArrayList<>();
+        candidates.add(parsedCode);                            // "EMP007"
+
+        // Extract the trailing digits
+        String digits = parsedCode.replaceAll("[^0-9]", "");   // "007"
+        if (!digits.isEmpty()) {
+            // Strip leading zeros → raw number
+            String raw = digits.replaceFirst("^0+", "");       // "7"
+            if (raw.isEmpty()) raw = "0";
+
+            candidates.add(raw);                               // "7"
+            // 2-digit zero-padded
+            candidates.add(String.format("%02d", Integer.parseInt(raw)));  // "07"
+            // 3-digit zero-padded
+            candidates.add(String.format("%03d", Integer.parseInt(raw)));  // "007"
+            // EMP + raw
+            candidates.add("EMP" + raw);                       // "EMP7"
+            // EMP + 2-digit
+            candidates.add("EMP" + String.format("%02d", Integer.parseInt(raw))); // "EMP07"
+        }
+
+        // De-duplicate while preserving order
+        return new ArrayList<>(new LinkedHashSet<>(candidates));
     }
 
     // -----------------------------------------------------------------------
@@ -195,7 +277,6 @@ public class AttendanceController {
         employeeNameColumn.setCellValueFactory(c -> {
             Integer id = c.getValue().getEmployeeId();
             if (id == null) return new SimpleStringProperty("Unknown");
-            // Lazy-load name (cached after first call via EmployeeDAO)
             try {
                 Optional<Employee> e = empDAO.findById(id);
                 return new SimpleStringProperty(e.map(Employee::getFullName).orElse("ID:" + id));
@@ -234,7 +315,7 @@ public class AttendanceController {
                 if (r.getTimeOut1() != null && r.getTimeIn2() != null) {
                     mins -= java.time.Duration.between(r.getTimeOut1(), r.getTimeIn2()).toMinutes();
                 } else if (mins > 300) {
-                    mins -= 60; // deduct default lunch
+                    mins -= 60;
                 }
                 double reg = Math.min(mins / 60.0, 8.0);
                 return new SimpleStringProperty(String.format("%.1f", reg));
@@ -328,10 +409,10 @@ public class AttendanceController {
     }
 
     private void updateStats() {
-        long total    = allRecords.size();
-        long valid    = allRecords.stream().filter(r -> !r.isHasAnomaly()).count();
+        long total     = allRecords.size();
+        long valid     = allRecords.stream().filter(r -> !r.isHasAnomaly()).count();
         long anomalies = allRecords.stream().filter(AttendanceRecord::isHasAnomaly).count();
-        long absent   = allRecords.stream().filter(AttendanceRecord::isAbsent).count();
+        long absent    = allRecords.stream().filter(AttendanceRecord::isAbsent).count();
 
         lastImportLabel.setText(total + " records");
         lastImportDateLabel.setText(LocalDate.now().format(DATE_FMT));
@@ -351,9 +432,9 @@ public class AttendanceController {
         sb.append("Lunch ✕ : ").append(r.getTimeOut1() != null ? r.getTimeOut1().format(TIME_FMT) : "Missed").append("\n");
         sb.append("Lunch → : ").append(r.getTimeIn2()  != null ? r.getTimeIn2().format(TIME_FMT)  : "Missed").append("\n");
         sb.append("Out     : ").append(r.getTimeOut2() != null ? r.getTimeOut2().format(TIME_FMT) : "Missed").append("\n\n");
-        if (r.isAbsent())       sb.append("Status  : ABSENT\n");
+        if (r.isAbsent())          sb.append("Status  : ABSENT\n");
         else if (r.isHasAnomaly()) sb.append("Status  : ANOMALY – ").append(r.getAnomalyDescription()).append("\n");
-        else                    sb.append("Status  : PRESENT\n");
+        else                       sb.append("Status  : PRESENT\n");
         a.setContentText(sb.toString());
         a.showAndWait();
     }
