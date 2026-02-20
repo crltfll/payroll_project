@@ -11,7 +11,7 @@
     
     <HBox alignment="CENTER_LEFT" spacing="20">
         <VBox spacing="4">
-            <Label text="Reports & Analytics" styleClass="card-title" style="-fx-font-size: 28px;"/>
+            <Label text="Reports &amp; Analytics" styleClass="card-title" style="-fx-font-size: 28px;"/>
             <Label text="Generate payroll reports and compliance documents" 
                    styleClass="card-subtitle"/>
         </VBox>

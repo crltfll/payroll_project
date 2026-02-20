@@ -8,38 +8,170 @@
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.example.payroll_project.controller.PayrollController"
       spacing="24">
-    
+
+    <!-- Page Header -->
     <HBox alignment="CENTER_LEFT" spacing="20">
         <VBox spacing="4">
             <Label text="Payroll Processing" styleClass="card-title" style="-fx-font-size: 28px;"/>
-            <Label text="Calculate salaries with Philippine law-compliant deductions" 
+            <Label text="Manage pay periods and compute salaries with Philippine law-compliant deductions"
                    styleClass="card-subtitle"/>
         </VBox>
-        
         <Region HBox.hgrow="ALWAYS"/>
-        
         <HBox spacing="10">
-            <Button text="Create Pay Period" styleClass="button-secondary"
-                    onAction="#handleCreatePayPeriod"/>
-            <Button text="Process Payroll" styleClass="button-primary"
-                    onAction="#handleProcessPayroll"/>
+            <Button text="⚙️ Process Payroll" styleClass="button-primary"
+                    onAction="#handleProcessPayroll"
+                    style="-fx-padding: 10px 20px; -fx-font-size: 14px;"/>
+            <Button text="📄 Generate Payslips" styleClass="button-secondary"
+                    onAction="#handleGeneratePayslips"
+                    style="-fx-padding: 10px 20px;"/>
         </HBox>
     </HBox>
-    
-    <VBox styleClass="card" alignment="CENTER" spacing="20" style="-fx-padding: 80px;">
-        <Label text="💰" style="-fx-font-size: 64px;"/>
-        <Label text="Payroll Processing Module" 
-               style="-fx-font-size: 24px; -fx-font-weight: 600;"/>
-        <Label text="Process employee salaries with automated calculations for:" 
-               styleClass="card-subtitle"/>
-        <VBox spacing="8" alignment="CENTER">
-            <Label text="• SSS, PhilHealth, Pag-IBIG contributions"/>
-            <Label text="• BIR withholding tax (TRAIN Law)"/>
-            <Label text="• Overtime, night differential, holiday pay"/>
-            <Label text="• Individual payslip generation"/>
-        </VBox>
-        <Button text="Start Processing" styleClass="button-primary" 
-                style="-fx-padding: 12px 32px; -fx-margin-top: 20px;"
-                onAction="#handleStartProcessing"/>
+
+    <!-- ─── PAY PERIOD MANAGEMENT ─── -->
+    <VBox styleClass="card" spacing="16">
+        <Label text="📅 Pay Period Management (F12)" styleClass="card-title"
+               style="-fx-font-size: 16px;"/>
+
+        <!-- Create Period Form -->
+        <HBox spacing="12" alignment="CENTER_LEFT">
+            <VBox spacing="4">
+                <Label text="Period Name" style="-fx-font-size: 11px; -fx-font-weight: 600;"/>
+                <TextField fx:id="periodNameField" promptText="e.g. Payroll March 2026"
+                           style="-fx-pref-width: 200px;"/>
+            </VBox>
+            <VBox spacing="4">
+                <Label text="Start Date" style="-fx-font-size: 11px; -fx-font-weight: 600;"/>
+                <DatePicker fx:id="startDatePicker" style="-fx-pref-width: 140px;"/>
+            </VBox>
+            <VBox spacing="4">
+                <Label text="End Date" style="-fx-font-size: 11px; -fx-font-weight: 600;"/>
+                <DatePicker fx:id="endDatePicker" style="-fx-pref-width: 140px;"/>
+            </VBox>
+            <VBox spacing="4">
+                <Label text="Pay Date" style="-fx-font-size: 11px; -fx-font-weight: 600;"/>
+                <DatePicker fx:id="payDatePicker" style="-fx-pref-width: 140px;"/>
+            </VBox>
+            <VBox spacing="4" alignment="BOTTOM_LEFT">
+                <Label text=" " style="-fx-font-size: 11px;"/>
+                <Button text="➕ Create Period" styleClass="button-primary"
+                        onAction="#handleCreatePeriod"
+                        style="-fx-padding: 8px 16px;"/>
+            </VBox>
+        </HBox>
+
+        <Separator/>
+
+        <!-- Period Filter + Table -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="Filter by status:" style="-fx-font-weight: 600;"/>
+            <ComboBox fx:id="periodStatusFilter" style="-fx-pref-width: 140px;"
+                      onAction="#handleFilterPeriods"/>
+        </HBox>
+
+        <TableView fx:id="periodTable" style="-fx-pref-height: 200px;">
+            <columns>
+                <TableColumn fx:id="colPeriodName"    text="Period Name"  prefWidth="200"/>
+                <TableColumn fx:id="colPeriodStart"   text="Start Date"   prefWidth="120" style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="colPeriodEnd"     text="End Date"     prefWidth="120" style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="colPeriodStatus"  text="Status"       prefWidth="110" style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="colPeriodActions" text="Actions"      prefWidth="160" style="-fx-alignment: CENTER;"/>
+            </columns>
+            <placeholder>
+                <VBox alignment="CENTER" spacing="10" style="-fx-padding: 30px;">
+                    <Label text="No pay periods created yet." style="-fx-text-fill: #6B7280;"/>
+                    <Label text="Use the form above to create your first pay period."
+                           styleClass="card-subtitle"/>
+                </VBox>
+            </placeholder>
+        </TableView>
+    </VBox>
+
+    <!-- ─── PAYROLL PROCESSING ─── -->
+    <VBox styleClass="card" spacing="16">
+        <HBox styleClass="card-header" alignment="CENTER_LEFT" spacing="15">
+            <VBox spacing="4">
+                <Label text="💰 Payroll Records" styleClass="card-title"/>
+                <Label fx:id="selectedPeriodLabel" text="No period selected — click Select on a period above"
+                       styleClass="card-subtitle"/>
+            </VBox>
+            <Region HBox.hgrow="ALWAYS"/>
+            <!-- Summary Stats -->
+            <HBox spacing="24" alignment="CENTER_RIGHT">
+                <VBox spacing="2" alignment="CENTER">
+                    <Label text="Employees" style="-fx-font-size: 11px; -fx-text-fill: #6B7280;"/>
+                    <Label fx:id="totalEmployeesLabel" text="0"
+                           style="-fx-font-size: 20px; -fx-font-weight: 700;"/>
+                </VBox>
+                <VBox spacing="2" alignment="CENTER">
+                    <Label text="Total Gross" style="-fx-font-size: 11px; -fx-text-fill: #6B7280;"/>
+                    <Label fx:id="totalGrossLabel" text="₱0.00"
+                           style="-fx-font-size: 18px; -fx-font-weight: 700; -fx-text-fill: #1E3A8A;"/>
+                </VBox>
+                <VBox spacing="2" alignment="CENTER">
+                    <Label text="Total Net Pay" style="-fx-font-size: 11px; -fx-text-fill: #6B7280;"/>
+                    <Label fx:id="totalNetLabel" text="₱0.00"
+                           style="-fx-font-size: 18px; -fx-font-weight: 700; -fx-text-fill: #10B981;"/>
+                </VBox>
+            </HBox>
+        </HBox>
+
+        <TableView fx:id="payrollTable" VBox.vgrow="ALWAYS" style="-fx-pref-height: 280px;">
+            <columns>
+                <TableColumn fx:id="colEmpCode"       text="Code"         prefWidth="80"/>
+                <TableColumn fx:id="colEmpName"       text="Employee"     prefWidth="180"/>
+                <TableColumn fx:id="colDaysWorked"    text="Days"         prefWidth="60"  style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="colRegHours"      text="Reg. Hrs"     prefWidth="75"  style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="colOtHours"       text="OT Hrs"       prefWidth="65"  style="-fx-alignment: CENTER;"/>
+                <TableColumn fx:id="colGrossPay"      text="Gross Pay"    prefWidth="115" style="-fx-alignment: CENTER_RIGHT;"/>
+                <TableColumn fx:id="colDeductions"    text="Deductions"   prefWidth="115" style="-fx-alignment: CENTER_RIGHT;"/>
+                <TableColumn fx:id="colNetPay"        text="Net Pay"      prefWidth="115" style="-fx-alignment: CENTER_RIGHT;"/>
+                <TableColumn fx:id="colPayrollActions" text="Details"      prefWidth="90"  style="-fx-alignment: CENTER;"/>
+            </columns>
+            <placeholder>
+                <VBox alignment="CENTER" spacing="12" style="-fx-padding: 50px;">
+                    <Label text="💰" style="-fx-font-size: 40px;"/>
+                    <Label text="No payroll records yet."
+                           style="-fx-font-size: 16px; -fx-font-weight: 600; -fx-text-fill: #374151;"/>
+                    <Label text="1. Create a pay period above.  2. Click Select.  3. Click Process Payroll."
+                           styleClass="card-subtitle"/>
+                </VBox>
+            </placeholder>
+        </TableView>
+    </VBox>
+
+    <!-- ─── COMPUTATION TRANSPARENCY (F1) ─── -->
+    <VBox styleClass="card" spacing="12">
+        <HBox alignment="CENTER_LEFT" spacing="15">
+            <VBox spacing="4" HBox.hgrow="ALWAYS">
+                <Label text="🔍 Computation Transparency (F1)"
+                       styleClass="card-title" style="-fx-font-size: 16px;"/>
+                <Label text="Select any row in the payroll table then click View Breakdown."
+                       styleClass="card-subtitle"/>
+            </VBox>
+            <Button text="📋 View Breakdown" styleClass="button-secondary"
+                    onAction="#handleShowTransparency"
+                    style="-fx-padding: 8px 16px;"/>
+        </HBox>
+        <TextArea fx:id="transparencyTextArea"
+                  promptText="Select a payroll row above and click View Breakdown…"
+                  editable="false" wrapText="true"
+                  style="-fx-font-family: 'Consolas', monospace; -fx-font-size: 12px;
+                         -fx-pref-height: 240px; -fx-background-color: #F9FAFB;"/>
+    </VBox>
+
+    <!-- ─── COMPLIANCE FOOTER ─── -->
+    <VBox styleClass="card" spacing="8"
+          style="-fx-background-color: #EFF6FF; -fx-border-color: #3B82F6; -fx-border-width: 1px;">
+        <HBox alignment="CENTER_LEFT" spacing="12">
+            <Label text="🔒" style="-fx-font-size: 20px;"/>
+            <VBox spacing="4">
+                <Label text="Statutory Compliance"
+                       style="-fx-font-weight: 600; -fx-text-fill: #1E40AF; -fx-font-size: 13px;"/>
+                <Label text="✓ SSS (RA 11199 – 4.5% employee, 9.5% employer)  |  ✓ PhilHealth (RA 11223 – 5% / 2.5% each)  |  ✓ Pag-IBIG (HDMF Circ. 460 – 2%, cap ₱200)"
+                       style="-fx-text-fill: #1E40AF; -fx-font-size: 11px;"/>
+                <Label text="✓ BIR Withholding Tax – TRAIN Law (RA 10963)  |  ✓ Payslip CSV Generation (CR6)"
+                       style="-fx-text-fill: #1E40AF; -fx-font-size: 11px;"/>
+            </VBox>
+        </HBox>
     </VBox>
 </VBox>

@@ -157,10 +157,6 @@ public class EmployeeFormController {
             errors.append("• First name is required\n");
         }
         
-        if (lastNameField.getText().trim().isEmpty()) {
-            errors.append("• Last name is required\n");
-        }
-        
         if (positionField.getText().trim().isEmpty()) {
             errors.append("• Position is required\n");
         }

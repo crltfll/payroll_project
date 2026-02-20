@@ -47,7 +47,7 @@
                     </VBox>
                     
                     <VBox spacing="6" GridPane.columnIndex="0" GridPane.rowIndex="2">
-                        <Label text="Last Name *" styleClass="input-label"/>
+                        <Label text="Last Name" styleClass="input-label"/>
                         <TextField fx:id="lastNameField" promptText="Last name"/>
                     </VBox>
                     

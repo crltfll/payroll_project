@@ -75,11 +75,12 @@ public class Employee {
 
     // Helper methods
     public String getFullName() {
-        StringBuilder sb = new StringBuilder(firstName);
+        StringBuilder sb = new StringBuilder(firstName != null ? firstName : "");
         if (middleName != null && !middleName.isBlank())
             sb.append(" ").append(middleName);
-        sb.append(" ").append(lastName);
-        return sb.toString();
+        if (lastName != null && !lastName.isBlank())
+            sb.append(" ").append(lastName);
+        return sb.toString().trim();
     }
 
     public String getDisplayName() {
@@ -89,7 +90,6 @@ public class Employee {
     public boolean isValid() {
         return employeeCode  != null && !employeeCode.isBlank()
             && firstName     != null && !firstName.isBlank()
-            && lastName      != null && !lastName.isBlank()
             && employmentType != null
             && position      != null && !position.isBlank()
             && baseRate      != null && baseRate.compareTo(BigDecimal.ZERO) > 0

@@ -17,8 +17,8 @@ import java.io.IOException;
  * Main Dashboard Controller
  * Handles navigation and content area management.
  *
- * Stores itself as userData on the root BorderPane so that child controllers
- * (e.g. DashboardHomeController) can reach it for Quick-Action navigation.
+ * FIXED: loadView() now wraps every child view in a ScrollPane so that
+ *        content is always reachable even on smaller / lower-resolution screens.
  */
 public class DashboardController {
 
@@ -35,7 +35,7 @@ public class DashboardController {
     @FXML private Button reportsButton;
     @FXML private Button settingsButton;
     @FXML private Button logoutButton;
-    @FXML private BorderPane rootBorderPane;   // fx:id="rootBorderPane" in dashboard.fxml
+    @FXML private BorderPane rootBorderPane;
 
     private Button currentActiveButton;
 
@@ -47,7 +47,6 @@ public class DashboardController {
             userRoleLabel.setText(currentUser.getRole().name());
         }
 
-        // Register self so child views can navigate back up the scene graph
         if (rootBorderPane != null) {
             rootBorderPane.setUserData(this);
         }
@@ -56,43 +55,17 @@ public class DashboardController {
     }
 
     // -----------------------------------------------------------------------
-    // Navigation — private (called by FXML sidebar buttons)
+    // Navigation
     // -----------------------------------------------------------------------
 
-    @FXML
-    private void showDashboardHome() {
-        loadView("/fxml/dashboard-home.fxml", dashboardButton);
-    }
+    @FXML private void showDashboardHome() { loadView("/fxml/dashboard-home.fxml", dashboardButton); }
+    @FXML private void showEmployees()     { loadView("/fxml/employees.fxml",       employeesButton); }
+    @FXML private void showAttendance()    { loadView("/fxml/attendance.fxml",      attendanceButton); }
+    @FXML private void showPayroll()       { loadView("/fxml/payroll.fxml",         payrollButton); }
+    @FXML private void showReports()       { loadView("/fxml/reports.fxml",         reportsButton); }
+    @FXML private void showSettings()      { loadView("/fxml/settings.fxml",        settingsButton); }
 
-    @FXML
-    private void showEmployees() {
-        loadView("/fxml/employees.fxml", employeesButton);
-    }
-
-    @FXML
-    private void showAttendance() {
-        loadView("/fxml/attendance.fxml", attendanceButton);
-    }
-
-    @FXML
-    private void showPayroll() {
-        loadView("/fxml/payroll.fxml", payrollButton);
-    }
-
-    @FXML
-    private void showReports() {
-        loadView("/fxml/reports.fxml", reportsButton);
-    }
-
-    @FXML
-    private void showSettings() {
-        loadView("/fxml/settings.fxml", settingsButton);
-    }
-
-    // -----------------------------------------------------------------------
-    // Public navigation — used by DashboardHomeController Quick Actions
-    // -----------------------------------------------------------------------
-
+    // Public aliases for DashboardHomeController quick-actions
     public void showEmployeesPublic()  { showEmployees();  }
     public void showAttendancePublic() { showAttendance(); }
     public void showPayrollPublic()    { showPayroll();    }
@@ -108,7 +81,6 @@ public class DashboardController {
         alert.setTitle("Logout");
         alert.setHeaderText("Are you sure you want to logout?");
         alert.setContentText("Any unsaved changes will be lost.");
-
         alert.showAndWait().ifPresent(response -> {
             if (response == ButtonType.OK) {
                 LoginController.logout();
@@ -117,7 +89,7 @@ public class DashboardController {
     }
 
     // -----------------------------------------------------------------------
-    // Helpers
+    // Core view loader
     // -----------------------------------------------------------------------
 
     private void loadView(String fxmlPath, Button button) {
@@ -125,14 +97,40 @@ public class DashboardController {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent view = loader.load();
 
-            // Re-register self after each child load (scene graph changes)
+            // Re-register self so child views can still navigate upward
             if (rootBorderPane != null) {
                 rootBorderPane.setUserData(this);
             }
 
-            contentArea.getChildren().clear();
-            contentArea.getChildren().add(view);
+            /*
+             * RESIZABILITY FIX
+             * ─────────────────
+             * If the loaded view is NOT already a ScrollPane (attendance.fxml wraps
+             * itself), we wrap it here so every panel scrolls on small screens.
+             */
+            javafx.scene.Node nodeToPlace;
+            if (view instanceof javafx.scene.control.ScrollPane) {
+                // Already a ScrollPane – use as-is
+                nodeToPlace = view;
+            } else {
+                javafx.scene.control.ScrollPane scroll =
+                        new javafx.scene.control.ScrollPane(view);
+                scroll.setFitToWidth(true);
+                scroll.setFitToHeight(false);   // let height grow naturally → enables vertical scroll
+                scroll.setHbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.NEVER);
+                scroll.setVbarPolicy(javafx.scene.control.ScrollPane.ScrollBarPolicy.AS_NEEDED);
+                // Transparent background so the existing card/dashboard styles show through
+                scroll.setStyle(
+                    "-fx-background-color: transparent;" +
+                    "-fx-background: transparent;" +
+                    "-fx-border-color: transparent;"
+                );
+                nodeToPlace = scroll;
+            }
 
+            contentArea.getChildren().setAll(nodeToPlace);
+
+            // Update active nav-button highlight
             if (currentActiveButton != null) {
                 currentActiveButton.getStyleClass().remove("nav-button-active");
             }

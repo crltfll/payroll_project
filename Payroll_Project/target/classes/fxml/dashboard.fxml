@@ -7,6 +7,7 @@
 
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
+            fx:id="rootBorderPane"
             fx:controller="com.example.payroll_project.controller.DashboardController"
             styleClass="dashboard-root">
 
@@ -26,10 +27,12 @@
                 </VBox>
             </HBox>
             
-            <!-- Quick Actions -->
+            <!-- Quick Actions in header (informational only — navigation done via sidebar) -->
             <HBox spacing="10" alignment="CENTER_RIGHT">
-                <Button text="Import Attendance" styleClass="header-button"/>
-                <Button text="Process Payroll" styleClass="header-button-primary"/>
+                <Button text="Import Attendance" styleClass="header-button"
+                        onAction="#showAttendance"/>
+                <Button text="Process Payroll" styleClass="header-button-primary"
+                        onAction="#showPayroll"/>
             </HBox>
 
             <Separator orientation="VERTICAL"/>
@@ -51,15 +54,12 @@
                     <Insets top="0" right="15" bottom="0" left="15"/>
                 </padding>
                 
-                <!-- Navigation Buttons -->
                 <Button fx:id="dashboardButton" 
                         text="Dashboard" 
                         onAction="#showDashboardHome"
                         styleClass="nav-button"
                         maxWidth="Infinity">
-                    <graphic>
-                        <Label text="🏠" styleClass="nav-icon"/>
-                    </graphic>
+                    <graphic><Label text="🏠" styleClass="nav-icon"/></graphic>
                 </Button>
                 
                 <Button fx:id="employeesButton" 
@@ -67,9 +67,7 @@
                         onAction="#showEmployees"
                         styleClass="nav-button"
                         maxWidth="Infinity">
-                    <graphic>
-                        <Label text="👥" styleClass="nav-icon"/>
-                    </graphic>
+                    <graphic><Label text="👥" styleClass="nav-icon"/></graphic>
                 </Button>
                 
                 <Button fx:id="attendanceButton" 
@@ -77,9 +75,7 @@
                         onAction="#showAttendance"
                         styleClass="nav-button"
                         maxWidth="Infinity">
-                    <graphic>
-                        <Label text="📋" styleClass="nav-icon"/>
-                    </graphic>
+                    <graphic><Label text="📋" styleClass="nav-icon"/></graphic>
                 </Button>
                 
                 <Button fx:id="payrollButton" 
@@ -87,9 +83,7 @@
                         onAction="#showPayroll"
                         styleClass="nav-button"
                         maxWidth="Infinity">
-                    <graphic>
-                        <Label text="💰" styleClass="nav-icon"/>
-                    </graphic>
+                    <graphic><Label text="💰" styleClass="nav-icon"/></graphic>
                 </Button>
                 
                 <Button fx:id="reportsButton" 
@@ -97,9 +91,7 @@
                         onAction="#showReports"
                         styleClass="nav-button"
                         maxWidth="Infinity">
-                    <graphic>
-                        <Label text="📊" styleClass="nav-icon"/>
-                    </graphic>
+                    <graphic><Label text="📊" styleClass="nav-icon"/></graphic>
                 </Button>
                 
                 <Separator/>
@@ -109,9 +101,7 @@
                         onAction="#showSettings"
                         styleClass="nav-button"
                         maxWidth="Infinity">
-                    <graphic>
-                        <Label text="⚙️" styleClass="nav-icon"/>
-                    </graphic>
+                    <graphic><Label text="⚙️" styleClass="nav-icon"/></graphic>
                 </Button>
             </VBox>
             
@@ -121,24 +111,19 @@
                 <padding>
                     <Insets top="0" right="15" bottom="0" left="15"/>
                 </padding>
-                
                 <Separator/>
-                
                 <Button fx:id="logoutButton" 
                         text="Logout" 
                         onAction="#handleLogout"
                         styleClass="nav-button-logout"
                         maxWidth="Infinity">
-                    <graphic>
-                        <Label text="🚪" styleClass="nav-icon"/>
-                    </graphic>
+                    <graphic><Label text="🚪" styleClass="nav-icon"/></graphic>
                 </Button>
             </VBox>
         </VBox>
     </left>
 
     <center>
-        <StackPane fx:id="contentArea" styleClass="dashboard-content">
-        </StackPane>
+        <StackPane fx:id="contentArea" styleClass="dashboard-content"/>
     </center>
 </BorderPane>
