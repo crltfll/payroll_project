@@ -13,7 +13,6 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
-import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,7 +30,11 @@ import java.util.Optional;
 
 /**
  * Payroll Controller (CR4, CR6, F1, F12)
- * Full payroll processing: pay periods, computation, transparency, payslip generation.
+ *
+ * FIX 1: Auto-selects the most recently created pay period on startup so
+ *         payroll records are visible without requiring a manual "Select" click.
+ *
+ * FIX 2: Added Delete button for non-locked (DRAFT / PROCESSING) pay periods.
  */
 public class PayrollController {
 
@@ -83,9 +86,7 @@ public class PayrollController {
     private final ObservableList<PayPeriod>     periods  = FXCollections.observableArrayList();
     private final ObservableList<PayrollRecord> records  = FXCollections.observableArrayList();
 
-    // Currently selected pay period for processing
     private PayPeriod selectedPeriod;
-    // Cache employee map for display
     private java.util.Map<Integer, Employee> empCache = new java.util.HashMap<>();
 
     // -----------------------------------------------------------------------
@@ -98,14 +99,13 @@ public class PayrollController {
         periodStatusFilter.getItems().addAll("All", "DRAFT", "PROCESSING", "FINALIZED", "PAID");
         periodStatusFilter.setValue("All");
 
-        // Default new period name
         LocalDate now = LocalDate.now();
         periodNameField.setText("Payroll " + now.getMonth().name() + " " + now.getYear());
         startDatePicker.setValue(now.withDayOfMonth(1));
         endDatePicker.setValue(now);
         payDatePicker.setValue(now.plusDays(5));
 
-        loadPayPeriods();
+        loadPayPeriods(true);   // true = auto-select most recent period
         loadEmployeeCache();
     }
 
@@ -138,7 +138,7 @@ public class PayrollController {
             try {
                 periodDAO.create(pp);
                 Platform.runLater(() -> {
-                    loadPayPeriods();
+                    loadPayPeriods(false);
                     alert(Alert.AlertType.INFORMATION, "Success", "Pay period created successfully.");
                 });
             } catch (Exception ex) {
@@ -150,10 +150,15 @@ public class PayrollController {
 
     @FXML
     private void handleFilterPeriods() {
-        loadPayPeriods();
+        loadPayPeriods(false);
     }
 
-    private void loadPayPeriods() {
+    /**
+     * @param autoSelectFirst when true, automatically selects and loads the most
+     *                        recently created period (so payroll records appear on
+     *                        startup without a manual "Select" click).
+     */
+    private void loadPayPeriods(boolean autoSelectFirst) {
         new Thread(() -> {
             try {
                 List<PayPeriod> all = periodDAO.findAll();
@@ -164,6 +169,18 @@ public class PayrollController {
                 Platform.runLater(() -> {
                     periods.setAll(all);
                     periodTable.setItems(periods);
+
+                    // FIX: auto-select the most recently created period so that
+                    // payroll records are visible immediately on app start.
+                    if (autoSelectFirst && selectedPeriod == null && !periods.isEmpty()) {
+                        selectPayPeriod(periods.get(0));
+                    } else if (selectedPeriod != null) {
+                        // Re-select the currently selected period after a list refresh.
+                        periods.stream()
+                                .filter(p -> p.getPayPeriodId().equals(selectedPeriod.getPayPeriodId()))
+                                .findFirst()
+                                .ifPresent(this::selectPayPeriod);
+                    }
                 });
             } catch (SQLException ex) {
                 logger.error("Load periods failed", ex);
@@ -198,22 +215,35 @@ public class PayrollController {
             }
         });
 
-        // Actions
+        // Actions — Select, Finalize, Delete
         colPeriodActions.setCellFactory(col -> new TableCell<>() {
-            private final Button selectBtn  = new Button("Select");
+            private final Button selectBtn   = new Button("Select");
             private final Button finalizeBtn = new Button("Finalize");
+            private final Button deleteBtn   = new Button("Delete");
+
             @Override protected void updateItem(Void v, boolean empty) {
                 super.updateItem(v, empty);
                 if (empty) { setGraphic(null); return; }
+
                 PayPeriod pp = getTableView().getItems().get(getIndex());
+
                 selectBtn.getStyleClass().add("button-primary");
                 selectBtn.setStyle("-fx-padding:4px 10px;-fx-font-size:11px;");
+
                 finalizeBtn.getStyleClass().add("button-secondary");
                 finalizeBtn.setStyle("-fx-padding:4px 10px;-fx-font-size:11px;");
                 finalizeBtn.setDisable(pp.isLocked());
-                selectBtn.setOnAction(e  -> selectPayPeriod(pp));
+
+                // Delete is only allowed for non-locked (DRAFT / PROCESSING) periods
+                deleteBtn.getStyleClass().add("button-danger");
+                deleteBtn.setStyle("-fx-padding:4px 10px;-fx-font-size:11px;");
+                deleteBtn.setDisable(pp.isLocked());
+
+                selectBtn.setOnAction(e   -> selectPayPeriod(pp));
                 finalizeBtn.setOnAction(e -> finalizePayPeriod(pp));
-                setGraphic(new javafx.scene.layout.HBox(5, selectBtn, finalizeBtn));
+                deleteBtn.setOnAction(e   -> handleDeletePeriod(pp));
+
+                setGraphic(new javafx.scene.layout.HBox(4, selectBtn, finalizeBtn, deleteBtn));
             }
         });
     }
@@ -238,7 +268,7 @@ public class PayrollController {
                         pp.setLocked(true);
                         periodDAO.update(pp);
                         Platform.runLater(() -> {
-                            loadPayPeriods();
+                            loadPayPeriods(false);
                             alert(Alert.AlertType.INFORMATION, "Finalized",
                                     "Pay period has been finalized and locked.");
                         });
@@ -248,6 +278,58 @@ public class PayrollController {
                     }
                 }).start();
             }
+        });
+    }
+
+    /**
+     * FIX: Delete a pay period (only allowed when it is NOT locked / finalized).
+     * Also removes all associated payroll records to keep the DB consistent.
+     */
+    private void handleDeletePeriod(PayPeriod pp) {
+        if (pp.isLocked()) {
+            alert(Alert.AlertType.WARNING, "Cannot Delete",
+                    "Finalized or paid pay periods cannot be deleted (regulatory requirement).");
+            return;
+        }
+
+        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+        confirm.setTitle("Delete Pay Period");
+        confirm.setHeaderText("Delete \"" + pp.getPeriodName() + "\"?");
+        confirm.setContentText(
+                "This will permanently remove the pay period AND all associated\n"
+              + "payroll records. Attendance records are NOT affected.\n\n"
+              + "This action cannot be undone.");
+        confirm.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
+        confirm.showAndWait().ifPresent(resp -> {
+            if (resp != ButtonType.OK) return;
+            new Thread(() -> {
+                try {
+                    // Delete payroll records first (FK constraint)
+                    List<PayrollRecord> associated =
+                            payrollDAO.findByPayPeriod(pp.getPayPeriodId());
+                    for (PayrollRecord pr : associated) {
+                        payrollDAO.delete(pr.getPayrollId());
+                    }
+                    periodDAO.delete(pp.getPayPeriodId());
+
+                    Platform.runLater(() -> {
+                        // Clear selection if deleted period was selected
+                        if (selectedPeriod != null &&
+                                selectedPeriod.getPayPeriodId().equals(pp.getPayPeriodId())) {
+                            selectedPeriod = null;
+                            selectedPeriodLabel.setText("No period selected — click Select on a period above");
+                            records.clear();
+                            updateSummaryStats(records);
+                        }
+                        loadPayPeriods(false);
+                        alert(Alert.AlertType.INFORMATION, "Deleted",
+                                "Pay period \"" + pp.getPeriodName() + "\" has been deleted.");
+                    });
+                } catch (Exception ex) {
+                    logger.error("Delete period failed", ex);
+                    Platform.runLater(() -> alert(Alert.AlertType.ERROR, "Delete Failed", ex.getMessage()));
+                }
+            }).start();
         });
     }
 
@@ -273,7 +355,6 @@ public class PayrollController {
         Optional<ButtonType> res = confirm.showAndWait();
         if (res.isEmpty() || res.get() != ButtonType.OK) return;
 
-        // Update status
         new Thread(() -> {
             try {
                 selectedPeriod.setStatus(PayPeriod.Status.PROCESSING);
@@ -291,7 +372,6 @@ public class PayrollController {
 
                         PayrollRecord pr = payrollSvc.compute(emp, selectedPeriod, attendance);
 
-                        // Save or update
                         Optional<PayrollRecord> existing =
                                 payrollDAO.findByPeriodAndEmployee(
                                         selectedPeriod.getPayPeriodId(), emp.getEmployeeId());
@@ -313,7 +393,7 @@ public class PayrollController {
                     records.setAll(computed);
                     payrollTable.setItems(records);
                     updateSummaryStats(computed);
-                    loadPayPeriods();
+                    loadPayPeriods(false);
                     alert(Alert.AlertType.INFORMATION, "Done",
                             "Payroll processed for " + computed.size() + " employee(s).");
                 });
@@ -368,7 +448,6 @@ public class PayrollController {
             return;
         }
 
-        // Re-compute on-the-fly to get full details
         new Thread(() -> {
             try {
                 Optional<Employee> empOpt = empDAO.findById(selected.getEmployeeId());

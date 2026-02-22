@@ -10,7 +10,6 @@ import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
-import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -71,10 +70,10 @@ public class EmployeesController {
     }
 
     private void setupTableColumns() {
-        codeColumn.setCellValueFactory(new PropertyValueFactory<>("employeeCode"));
+        codeColumn.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getEmployeeCode()));
         nameColumn.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getFullName()));
-        positionColumn.setCellValueFactory(new PropertyValueFactory<>("position"));
-        departmentColumn.setCellValueFactory(new PropertyValueFactory<>("department"));
+        positionColumn.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getPosition()));
+        departmentColumn.setCellValueFactory(c -> new SimpleStringProperty(c.getValue().getDepartment()));
         employmentTypeColumn.setCellValueFactory(c ->
                 new SimpleStringProperty(c.getValue().getEmploymentType().name().replace("_", " ")));
         baseRateColumn.setCellValueFactory(c -> {

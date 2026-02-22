@@ -21,7 +21,7 @@
             
             <VBox alignment="CENTER" spacing="20">
                 <StackPane styleClass="login-logo">
-                    <Label text="KC" styleClass="login-logo-text"/>
+                    <Label text="KC-02N Payroll System" styleClass="login-logo-text"/>
                 </StackPane>
                 <Text text="Payroll System" styleClass="login-brand-title"/>
                 <Text text="Biometric Scanner Integration" styleClass="login-brand-subtitle"/>

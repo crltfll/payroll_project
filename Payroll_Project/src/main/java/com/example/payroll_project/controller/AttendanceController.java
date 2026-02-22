@@ -23,8 +23,11 @@ import java.util.*;
 /**
  * Attendance Controller (CR1: FA2000 Biometric Attendance Integration)
  *
- * FIX: Employee-code matching now tries multiple formats so that a device
- *      ID of "7" will match database codes "EMP007", "007", "07", or "7".
+ * FIX 1: Default date range is now 3 years back → today so all historical
+ *         records (including old CSV imports) are visible on first load.
+ *
+ * FIX 2: Employee-code matching tries multiple formats so that a device
+ *         ID of "7" will match database codes "EMP007", "007", "07", or "7".
  */
 public class AttendanceController {
 
@@ -61,14 +64,39 @@ public class AttendanceController {
     private final ObservableList<AttendanceRecord> allRecords      = FXCollections.observableArrayList();
     private final ObservableList<AttendanceRecord> filteredRecords = FXCollections.observableArrayList();
 
+    /** Cache of employeeId → Employee so code lookup doesn't hit the DB per cell. */
+    private java.util.Map<Integer, Employee> empCache = new java.util.HashMap<>();
+
     @FXML
     public void initialize() {
         setupTableColumns();
+
+        // FIX: Default to a wide range (3 years back → today) so all historical
+        // CSV imports are immediately visible without manual filter adjustment.
         LocalDate now = LocalDate.now();
-        startDatePicker.setValue(now.withDayOfMonth(1));
+        startDatePicker.setValue(now.minusYears(3));
         endDatePicker.setValue(now);
+
         attendanceTable.setItems(filteredRecords);
+        loadEmployeeCache();   // populate cache first; table refresh happens after
         loadFromDatabase();
+    }
+
+    /** Loads all employees into a local cache keyed by employeeId. */
+    private void loadEmployeeCache() {
+        new Thread(() -> {
+            try {
+                List<Employee> employees = empDAO.findAll(false);
+                java.util.Map<Integer, Employee> map = new java.util.HashMap<>();
+                for (Employee e : employees) map.put(e.getEmployeeId(), e);
+                javafx.application.Platform.runLater(() -> {
+                    empCache = map;
+                    attendanceTable.refresh();
+                });
+            } catch (Exception ex) {
+                logger.error("Employee cache load failed", ex);
+            }
+        }).start();
     }
 
     // -----------------------------------------------------------------------
@@ -97,21 +125,16 @@ public class AttendanceController {
                         FA2000CSVParser.parseAllEmployees(file.getAbsolutePath());
 
                 int total = 0, saved = 0, anomalyCount = 0;
-                // Track unmatched so we can tell the user exactly what codes to use
                 List<String> unmatchedDetails = new ArrayList<>();
 
                 for (Map.Entry<String, List<AttendanceRecord>> entry : byEmployee.entrySet()) {
-                    String parsedCode = entry.getKey();          // e.g. "EMP007"
+                    String parsedCode = entry.getKey();
                     List<AttendanceRecord> records = entry.getValue();
 
-                    // --- FIX: Try several code variants ----------------------------
                     Optional<Employee> empOpt = resolveEmployee(parsedCode);
-                    // ---------------------------------------------------------------
-
                     Integer empId = empOpt.map(Employee::getEmployeeId).orElse(null);
 
                     if (empId == null) {
-                        // Build a helpful message listing all codes we tried
                         String tried = String.join(", ", buildCodeCandidates(parsedCode));
                         unmatchedDetails.add(
                                 "  • CSV device ID → " + parsedCode
@@ -143,6 +166,20 @@ public class AttendanceController {
                 javafx.application.Platform.runLater(() -> {
                     loading.close();
 
+                    // After import, widen the date range to cover newly imported data
+                    // so records are visible immediately without manual adjustment.
+                    byEmpF.values().stream()
+                            .flatMap(Collection::stream)
+                            .map(AttendanceRecord::getAttendanceDate)
+                            .filter(d -> d != null)
+                            .min(LocalDate::compareTo)
+                            .ifPresent(earliest -> {
+                                if (startDatePicker.getValue() == null ||
+                                        earliest.isBefore(startDatePicker.getValue())) {
+                                    startDatePicker.setValue(earliest);
+                                }
+                            });
+
                     allRecords.clear();
                     byEmpF.values().forEach(allRecords::addAll);
                     applyFilters();
@@ -172,7 +209,6 @@ public class AttendanceController {
                     result.setTitle("Import Complete");
                     result.setHeaderText("FA2000 CSV Import " + (unmatchedF.isEmpty() ? "Successful" : "— Action Required"));
                     result.setContentText(msg.toString());
-                    // Make dialog wide enough to read the details
                     result.getDialogPane().setMinWidth(560);
                     result.showAndWait();
                 });
@@ -192,22 +228,9 @@ public class AttendanceController {
     }
 
     // -----------------------------------------------------------------------
-    // Employee code resolution  (THE FIX)
+    // Employee code resolution
     // -----------------------------------------------------------------------
 
-    /**
-     * The FA2000 parser always generates codes like "EMP007" from device ID "7".
-     * Users may have registered the employee with any of several formats.
-     * This method tries them all in order of likelihood.
-     *
-     * Candidates tried for device ID "7" / parsed code "EMP007":
-     *   1. EMP007   (what the parser generates)
-     *   2. 7        (raw numeric – most common manual entry)
-     *   3. 07       (zero-padded 2-digit)
-     *   4. 007      (zero-padded 3-digit)
-     *   5. EMP7     (no padding variant)
-     *   6. EMP07    (2-digit padded variant)
-     */
     private Optional<Employee> resolveEmployee(String parsedCode) throws java.sql.SQLException {
         for (String candidate : buildCodeCandidates(parsedCode)) {
             Optional<Employee> found = empDAO.findByEmployeeCode(candidate);
@@ -221,37 +244,31 @@ public class AttendanceController {
 
     private List<String> buildCodeCandidates(String parsedCode) {
         List<String> candidates = new ArrayList<>();
-        candidates.add(parsedCode);                            // "EMP007"
+        candidates.add(parsedCode);
 
-        // Extract the trailing digits
-        String digits = parsedCode.replaceAll("[^0-9]", "");   // "007"
+        String digits = parsedCode.replaceAll("[^0-9]", "");
         if (!digits.isEmpty()) {
-            // Strip leading zeros → raw number
-            String raw = digits.replaceFirst("^0+", "");       // "7"
+            String raw = digits.replaceFirst("^0+", "");
             if (raw.isEmpty()) raw = "0";
 
-            candidates.add(raw);                               // "7"
-            // 2-digit zero-padded
-            candidates.add(String.format("%02d", Integer.parseInt(raw)));  // "07"
-            // 3-digit zero-padded
-            candidates.add(String.format("%03d", Integer.parseInt(raw)));  // "007"
-            // EMP + raw
-            candidates.add("EMP" + raw);                       // "EMP7"
-            // EMP + 2-digit
-            candidates.add("EMP" + String.format("%02d", Integer.parseInt(raw))); // "EMP07"
+            candidates.add(raw);
+            candidates.add(String.format("%02d", Integer.parseInt(raw)));
+            candidates.add(String.format("%03d", Integer.parseInt(raw)));
+            candidates.add("EMP" + raw);
+            candidates.add("EMP" + String.format("%02d", Integer.parseInt(raw)));
         }
 
-        // De-duplicate while preserving order
         return new ArrayList<>(new LinkedHashSet<>(candidates));
     }
 
     // -----------------------------------------------------------------------
-    // Load from DB on initialize
+    // Load from DB on initialize / filter change
     // -----------------------------------------------------------------------
 
     private void loadFromDatabase() {
         new Thread(() -> {
             try {
+                // If both dates are set use them; otherwise load everything.
                 LocalDate s = startDatePicker.getValue();
                 LocalDate e = endDatePicker.getValue();
                 List<AttendanceRecord> records = attDAO.findByDateRange(s, e);
@@ -271,18 +288,21 @@ public class AttendanceController {
     // -----------------------------------------------------------------------
 
     private void setupTableColumns() {
-        employeeCodeColumn.setCellValueFactory(c ->
-                new SimpleStringProperty("EMP-" + c.getValue().getEmployeeId()));
+        // FIX: Use the actual employee_code from the DB (via cache) instead of
+        // fabricating "EMP-{dbId}" which was showing the wrong value (e.g. EMP-2
+        // for an employee whose actual code is 7).
+        employeeCodeColumn.setCellValueFactory(c -> {
+            Integer id = c.getValue().getEmployeeId();
+            Employee emp = id != null ? empCache.get(id) : null;
+            String code = emp != null ? emp.getEmployeeCode() : (id != null ? "ID:" + id : "?");
+            return new SimpleStringProperty(code);
+        });
 
+        // Also switch name lookup to use the cache (avoids one DB query per cell).
         employeeNameColumn.setCellValueFactory(c -> {
             Integer id = c.getValue().getEmployeeId();
-            if (id == null) return new SimpleStringProperty("Unknown");
-            try {
-                Optional<Employee> e = empDAO.findById(id);
-                return new SimpleStringProperty(e.map(Employee::getFullName).orElse("ID:" + id));
-            } catch (Exception ex) {
-                return new SimpleStringProperty("ID:" + id);
-            }
+            Employee emp = id != null ? empCache.get(id) : null;
+            return new SimpleStringProperty(emp != null ? emp.getFullName() : (id != null ? "ID:" + id : "Unknown"));
         });
 
         dateColumn.setCellValueFactory(c -> {

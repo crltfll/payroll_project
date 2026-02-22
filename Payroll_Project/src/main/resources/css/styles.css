@@ -31,7 +31,7 @@
     -fx-font-family: 'Segoe UI Semibold', 'SF Pro Display', system-ui, sans-serif;
     -fx-font-size: 42px;
     -fx-font-weight: bold;
-    -fx-text-fill: white;
+    -fx-text-fill: #ffffff;
 }
 
 .login-brand-title {
