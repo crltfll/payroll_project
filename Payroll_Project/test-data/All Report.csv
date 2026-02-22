@@ -1,7 +1,7 @@
-Attend. Report,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-Date,,2025-01-26 ~ 2025-02-10,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-Dept.,Not Set1,,,,,,,Name,Uj,,,,,,Dept.,,,,,,,,Name,,,,,,,Dept.,,,,,,,,Name,,,,,
-Date,2025-01-26 ~ 2025-02-10,,,,,,,ID,7,,,,,,Date,,,,,,,,ID,,,,,,,Date,,,,,,,,ID,,,,,
+Attend. Report,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Date,,2025-01-26 ~ 2025-02-10,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+Dept.,Not Set1,,,,,,,Name,Tin Dupo,,,,,,Dept.,Not Set1,,,,,,,Name,Volts,,,,,,Dept.,Not Set1,,,,,,,Name,Tina,,,,,,Dept.,Not Set1,,,,,,,Name,Mel,,,,,,Dept.,Not Set1,,,,,,,Name,Irish,,,,,,Dept.,Not Set1,,,,,,,Name,Lica,,,,,,Dept.,Not Set1,,,,,,,Name,Uj,,,,
+Date,2025-01-26 ~ 2025-02-10,,,,,,,ID,1,,,,,,Date,2025-01-26 ~ 2025-02-10,,,,,,,ID,2,,,,,,Date,2025-01-26 ~ 2025-02-10,,,,,,,ID,3,,,,,,Date,2025-01-26 ~ 2025-02-10,,,,,,,ID,4,,,,,,Date,2025-01-26 ~ 2025-02-10,,,,,,,ID,5,,,,,,Date,2025-01-26 ~ 2025-02-10,,,,,,,ID,6,,,,,,Date,2025-01-26 ~ 2025-02-10,,,,,,,ID,7,,,,
 "Absences
 (Day)","Leave
 (Day)","Business trip
@@ -14,26 +14,42 @@ Date,2025-01-26 ~ 2025-02-10,,,,,,,ID,7,,,,,,Date,,,,,,,,ID,,,,,,,Date,,,,,,,,ID
 (Day)","Leave
 (Day)","Business trip
 (Day)",,"Attendance
+(Day)",OT,,,Late,,,Early,,,,"Absences
+(Day)","Leave
+(Day)","Business trip
+(Day)",,"Attendance
+(Day)",OT,,,Late,,,Early,,,,"Absences
+(Day)","Leave
+(Day)","Business trip
+(Day)",,"Attendance
+(Day)",OT,,,Late,,,Early,,,,"Absences
+(Day)","Leave
+(Day)","Business trip
+(Day)",,"Attendance
+(Day)",OT,,,Late,,,Early,,,,"Absences
+(Day)","Leave
+(Day)","Business trip
+(Day)",,"Attendance
 (Day)",OT,,,Late,,,Early,,
-,,,,,Normal,,Special,Frequency,Min,,Frequency,,Min,,,,,,,Normal,,Special,Frequency,Min,,Frequency,,Min,,,,,,,Normal,,Special,Frequency,Min,,Frequency,,Min
-6.0 ,0.0 ,0.0 ,,10.0 ,00:00,,00:00,3,16,,1,,24,,0.0 ,0.0 ,0.0 ,,0.0 ,00:00,,00:00,0,0,,0,,0,,0.0 ,0.0 ,0.0 ,,0.0 ,00:00,,00:00,0,0,,0,,0
-,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-All Report,,,,,,,,,,,,,,,All Report,,,,,,,,,,,,,,,All Report,,,,,,,,,,,,,
-Date/Week,Time1,,,,,Time2,,,,OT,,,,,Date/Week,Time1,,,,,Time2,,,,OT,,,,,Date/Week,Time1,,,,,Time2,,,,OT,,,
-,In,,Out,,,In,,Out,,In,,Out,,,,In,,Out,,,In,,Out,,In,,Out,,,,In,,Out,,,In,,Out,,In,,Out,
-26/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-27/Mon,08:59,,Missed,,,Missed,,Missed,,18:40,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-28/Tue,09:07,,Missed,,,Missed,,Missed,,18:15,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-29/Wed,Missed,,Missed,,,Missed,,Missed,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-30/Thu,09:00,,Missed,,,Missed,,Missed,,18:33,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-31/Fri,08:56,,Missed,,,Missed,,Missed,,18:04,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-1/Sat,09:04,,Missed,,,Missed,,Missed,,18:04,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-2/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-3/Mon,09:05,,Missed,,,Missed,,Missed,,18:10,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-4/Tue,08:58,,Missed,,,Missed,,Missed,,18:35,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-5/Wed,Missed,,Missed,,,Missed,,Missed,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-6/Thu,Missed,,Missed,,,Missed,,Missed,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-7/Fri,09:00,,Missed,,,Missed,,Missed,,18:20,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-8/Sat,09:00,,Missed,,,Missed,,17:36,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-9/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
-10/Mon,09:00,,Missed,,,Missed,,Missed,,18:32,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+,,,,,Normal,,Special,Frequency,Min,,Frequency,,Min,,,,,,,Normal,,Special,Frequency,Min,,Frequency,,Min,,,,,,,Normal,,Special,Frequency,Min,,Frequency,,Min,,,,,,,Normal,,Special,Frequency,Min,,Frequency,,Min,,,,,,,Normal,,Special,Frequency,Min,,Frequency,,Min,,,,,,,Normal,,Special,Frequency,Min,,Frequency,,Min,,,,,,,Normal,,Special,Frequency,Min,,Frequency,,Min
+16,0,0,,0,0:00,,0:00,0,0,,0,,0,,16,0,0,,0,0:00,,0:00,0,0,,0,,0,,4,0,0,,12,0:00,,0:00,4,37,,3,,165,,4,0,0,,12,0:00,,0:00,2,46,,1,,25,,4,0,0,,12,0:00,,0:00,3,40,,1,,27,,16,0,0,,0,0:00,,0:00,0,0,,0,,0,,6,0,0,,10,0:00,,0:00,3,16,,1,,24
+,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,,
+All Report,,,,,,,,,,,,,,,All Report,,,,,,,,,,,,,,,All Report,,,,,,,,,,,,,,,All Report,,,,,,,,,,,,,,,All Report,,,,,,,,,,,,,,,All Report,,,,,,,,,,,,,,,All Report,,,,,,,,,,,,,
+Date/Week,Time1,,,,,Time2,,,,OT,,,,,Date/Week,Time1,,,,,Time2,,,,OT,,,,,Date/Week,Time1,,,,,Time2,,,,OT,,,,,Date/Week,Time1,,,,,Time2,,,,OT,,,,,Date/Week,Time1,,,,,Time2,,,,OT,,,,,Date/Week,Time1,,,,,Time2,,,,OT,,,,,Date/Week,Time1,,,,,Time2,,,,OT,,,
+,In,,Out,,,In,,Out,,In,,Out,,,,In,,Out,,,In,,Out,,In,,Out,,,,In,,Out,,,In,,Out,,In,,Out,,,,In,,Out,,,In,,Out,,In,,Out,,,,In,,Out,,,In,,Out,,In,,Out,,,,In,,Out,,,In,,Out,,In,,Out,,,,In,,Out,,,In,,Out,,In,,Out,
+26/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,26/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,26/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,26/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,26/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,26/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,26/Sun,Missed,,Missed,,,Missed,,Missed,,,,,
+27/Mon,Missed,,Missed,,,Missed,,Missed,,,,,,,27/Mon,Missed,,Missed,,,Missed,,Missed,,,,,,,27/Mon,Missed,,12:30,,,Missed,,Missed,,18:44,,,,,27/Mon,8:37,,Missed,,,Missed,,Missed,,18:44,,,,,27/Mon,8:34,,Missed,,,Missed,,Missed,,18:44,,,,,27/Mon,Missed,,Missed,,,Missed,,Missed,,,,,,,27/Mon,8:59,,Missed,,,Missed,,Missed,,18:40,,,
+28/Tue,Missed,,Missed,,,Missed,,Missed,,,,,,,28/Tue,Missed,,Missed,,,Missed,,Missed,,,,,,,28/Tue,8:58,,Missed,,,Missed,,Missed,,18:15,,,,,28/Tue,8:57,,Missed,,,Missed,,Missed,,18:15,,,,,28/Tue,9:16,,Missed,,,Missed,,Missed,,18:15,,,,,28/Tue,Missed,,Missed,,,Missed,,Missed,,,,,,,28/Tue,9:07,,Missed,,,Missed,,Missed,,18:15,,,
+29/Wed,Missed,,Missed,,,Missed,,Missed,,,,,,,29/Wed,Missed,,Missed,,,Missed,,Missed,,,,,,,29/Wed,Missed,,Missed,,,Missed,,Missed,,,,,,,29/Wed,Missed,,Missed,,,Missed,,Missed,,,,,,,29/Wed,Missed,,Missed,,,Missed,,Missed,,,,,,,29/Wed,Missed,,Missed,,,Missed,,Missed,,,,,,,29/Wed,Missed,,Missed,,,Missed,,Missed,,,,,
+30/Thu,Missed,,Missed,,,Missed,,Missed,,,,,,,30/Thu,Missed,,Missed,,,Missed,,Missed,,,,,,,30/Thu,Missed,,Missed,,,Missed,,Missed,,18:32,,,,,30/Thu,9:00,,Missed,,,Missed,,Missed,,18:32,,,,,30/Thu,8:49,,Missed,,,Missed,,Missed,,18:32,,,,,30/Thu,Missed,,Missed,,,Missed,,Missed,,,,,,,30/Thu,9:00,,Missed,,,Missed,,Missed,,18:33,,,
+31/Fri,Missed,,Missed,,,Missed,,Missed,,,,,,,31/Fri,Missed,,Missed,,,Missed,,Missed,,,,,,,31/Fri,8:47,,Missed,,,Missed,,16:11,,,,,,,31/Fri,9:41,,Missed,,,Missed,,Missed,,18:04,,,,,31/Fri,8:38,,Missed,,,Missed,,Missed,,18:04,,,,,31/Fri,Missed,,Missed,,,Missed,,Missed,,,,,,,31/Fri,8:56,,Missed,,,Missed,,Missed,,18:04,,,
+1/Sat,Missed,,Missed,,,Missed,,Missed,,,,,,,1/Sat,Missed,,Missed,,,Missed,,Missed,,,,,,,1/Sat,8:46,,Missed,,,Missed,,Missed,,18:03,,,,,1/Sat,8:44,,Missed,,,Missed,,Missed,,18:03,,,,,1/Sat,8:28,,Missed,,,Missed,,Missed,,18:04,,,,,1/Sat,Missed,,Missed,,,Missed,,Missed,,,,,,,1/Sat,9:04,,Missed,,,Missed,,Missed,,18:04,,,
+2/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,2/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,2/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,2/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,2/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,2/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,2/Sun,Missed,,Missed,,,Missed,,Missed,,,,,
+3/Mon,Missed,,Missed,,,Missed,,Missed,,,,,,,3/Mon,Missed,,Missed,,,Missed,,Missed,,,,,,,3/Mon,9:11,,Missed,,,Missed,,Missed,,18:35,,,,,3/Mon,8:49,,Missed,,,Missed,,Missed,,18:35,,,,,3/Mon,8:49,,Missed,,,Missed,,Missed,,18:10,,,,,3/Mon,Missed,,Missed,,,Missed,,Missed,,,,,,,3/Mon,9:05,,Missed,,,Missed,,Missed,,18:10,,,
+4/Tue,Missed,,Missed,,,Missed,,Missed,,,,,,,4/Tue,Missed,,Missed,,,Missed,,Missed,,,,,,,4/Tue,9:06,,Missed,,,Missed,,Missed,,18:35,,,,,4/Tue,8:34,,Missed,,,Missed,,Missed,,18:34,,,,,4/Tue,9:21,,Missed,,,Missed,,Missed,,18:35,,,,,4/Tue,Missed,,Missed,,,Missed,,Missed,,,,,,,4/Tue,8:58,,Missed,,,Missed,,Missed,,18:35,,,
+5/Wed,Missed,,Missed,,,Missed,,Missed,,,,,,,5/Wed,Missed,,Missed,,,Missed,,Missed,,,,,,,5/Wed,8:49,,Missed,,,Missed,,Missed,,18:42,,,,,5/Wed,8:45,,Missed,,,Missed,,Missed,,18:44,,,,,5/Wed,8:58,,Missed,,,Missed,,Missed,,18:44,,,,,5/Wed,Missed,,Missed,,,Missed,,Missed,,,,,,,5/Wed,Missed,,Missed,,,Missed,,Missed,,,,,
+6/Thu,Missed,,Missed,,,Missed,,Missed,,,,,,,6/Thu,Missed,,Missed,,,Missed,,Missed,,,,,,,6/Thu,9:18,,Missed,,,Missed,,Missed,,18:48,,,,,6/Thu,8:56,,Missed,,,Missed,,Missed,,,,19:20,,,6/Thu,9:03,,Missed,,,Missed,,Missed,,,19:20,,,,6/Thu,Missed,,Missed,,,Missed,,Missed,,,,,,,6/Thu,Missed,,Missed,,,Missed,,Missed,,,,,
+7/Fri,Missed,,Missed,,,Missed,,Missed,,,,,,,7/Fri,Missed,,Missed,,,Missed,,Missed,,,,,,,7/Fri,8:57,,Missed,,,Missed,,Missed,,18:19,,,,,7/Fri,Missed,,Missed,,,Missed,,Missed,,18:20,,,,,7/Fri,8:50,,Missed,,,Missed,,Missed,,18:20,,,,,7/Fri,Missed,,Missed,,,Missed,,Missed,,,,,,,7/Fri,9:00,,Missed,,,Missed,,Missed,,18:20,,,
+8/Sat,Missed,,Missed,,,Missed,,Missed,,,,,,,8/Sat,Missed,,Missed,,,Missed,,Missed,,,,,,,8/Sat,8:39,,Missed,,,Missed,,17:34,,,,,,,8/Sat,9:05,,Missed,,,Missed,,17:35,,,,,,,8/Sat,8:30,,Missed,,,Missed,,17:33,,,,,,,8/Sat,Missed,,Missed,,,Missed,,Missed,,,,,,,8/Sat,9:00,,Missed,,,Missed,,17:36,,,,,
+9/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,9/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,9/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,9/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,9/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,9/Sun,Missed,,Missed,,,Missed,,Missed,,,,,,,9/Sun,Missed,,Missed,,,Missed,,Missed,,,,,
+10/Mon,Missed,,Missed,,,Missed,,Missed,,,,,,,10/Mon,Missed,,Missed,,,Missed,,Missed,,,,,,,10/Mon,9:02,,Missed,,,Missed,,Missed,,18:31,,,,,10/Mon,8:53,,Missed,,,Missed,,Missed,,18:11,,,,,10/Mon,8:56,,Missed,,,Missed,,Missed,,18:31,,,,,10/Mon,Missed,,Missed,,,Missed,,Missed,,,,,,,10/Mon,9:00,,Missed,,,Missed,,Missed,,18:32,,,
