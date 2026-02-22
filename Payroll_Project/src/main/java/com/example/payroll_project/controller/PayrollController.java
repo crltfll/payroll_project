@@ -129,13 +129,34 @@ public class PayrollController {
             return;
         }
 
-        PayPeriod pp = new PayPeriod(name, s, e);
-        pp.setPayDate(pd);
-        pp.setCreatedBy(LoginController.getCurrentUser() != null
-                ? LoginController.getCurrentUser().getUserId() : null);
-
         new Thread(() -> {
             try {
+                // Check for duplicate date range BEFORE inserting
+                Optional<PayPeriod> existing = periodDAO.findByStartAndEnd(s, e);
+                if (existing.isPresent()) {
+                    PayPeriod dup = existing.get();
+                    Platform.runLater(() -> {
+                        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
+                        confirm.setTitle("Pay Period Already Exists");
+                        confirm.setHeaderText("A pay period with this date range already exists.");
+                        confirm.setContentText(
+                                "Existing: \"" + dup.getPeriodName() + "\" (" + dup.getStatus().name() + ")\n\n"
+                                        + "Would you like to select it instead of creating a duplicate?");
+                        confirm.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
+                        confirm.showAndWait().ifPresent(resp -> {
+                            if (resp == ButtonType.YES) {
+                                selectPayPeriod(dup);
+                            }
+                        });
+                    });
+                    return;
+                }
+
+                PayPeriod pp = new PayPeriod(name, s, e);
+                pp.setPayDate(pd);
+                pp.setCreatedBy(LoginController.getCurrentUser() != null
+                        ? LoginController.getCurrentUser().getUserId() : null);
+
                 periodDAO.create(pp);
                 Platform.runLater(() -> {
                     loadPayPeriods(false);
@@ -147,7 +168,6 @@ public class PayrollController {
             }
         }).start();
     }
-
     @FXML
     private void handleFilterPeriods() {
         loadPayPeriods(false);
