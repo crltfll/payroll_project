@@ -16,14 +16,13 @@ import java.util.Optional;
 /**
  * Employee Data Access Object (F9: Employee Management System)
  *
- * BUG FIX: The original update() reused setEmployeeParameters() which was
- * designed for the CREATE statement (no date_separated column).  The UPDATE
- * SQL has an extra `date_separated` placeholder at position 12, which shifted
- * every subsequent parameter by one — causing rate_type ("DAILY") to be stored
- * in the base_rate column and producing "Bad value for type BigDecimal : DAILY".
+ * FIX 1 (original): update() now sets every parameter explicitly, matching the
+ *   UPDATE SQL column order to prevent base_rate/rate_type corruption.
  *
- * Fix: update() now sets every parameter explicitly, matching the UPDATE SQL
- * column order exactly.
+ * FIX 2 (new): createOrReactivate() checks for a soft-deleted row with the same
+ *   employee_code before inserting.  If one exists it reactivates + updates it
+ *   instead of inserting, preventing the UNIQUE constraint violation that occurred
+ *   when an operator re-entered a previously deactivated employee.
  */
 public class EmployeeDAO implements BaseDAO<Employee, Integer> {
 
@@ -37,6 +36,41 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
     // -----------------------------------------------------------------------
     // CREATE
     // -----------------------------------------------------------------------
+
+    /**
+     * Creates a new employee, OR reactivates a previously soft-deleted employee
+     * whose employee_code matches.  This prevents UNIQUE constraint failures when
+     * an operator re-enters the same employee code after a soft-delete.
+     *
+     * Use this method from the UI instead of create() for new-employee flows.
+     *
+     * @return the created/reactivated Employee (with its database ID set)
+     */
+    public Employee createOrReactivate(Employee employee) throws SQLException {
+        // Check whether a (possibly inactive) row already exists for this code
+        String checkSql = "SELECT employee_id, is_active FROM employees WHERE employee_code = ?";
+        try (Connection conn = dbManager.getConnection();
+             PreparedStatement ps = conn.prepareStatement(checkSql)) {
+            ps.setString(1, employee.getEmployeeCode());
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    boolean wasActive = rs.getBoolean("is_active");
+                    // Row exists (active or inactive) — reuse its ID and UPDATE
+                    employee.setEmployeeId(rs.getInt("employee_id"));
+                    employee.setActive(true);   // always reactivate
+                    update(employee);
+                    if (wasActive) {
+                        logger.info("Updated existing active employee: {}", employee.getEmployeeCode());
+                    } else {
+                        logger.info("Reactivated soft-deleted employee: {}", employee.getEmployeeCode());
+                    }
+                    return employee;
+                }
+            }
+        }
+        // No existing row — safe to INSERT normally
+        return create(employee);
+    }
 
     @Override
     public Employee create(Employee employee) throws SQLException {
@@ -75,27 +109,6 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
 
     /**
      * Sets parameters for the CREATE statement (20 params, no date_separated).
-     *
-     *  1  employee_code
-     *  2  first_name
-     *  3  middle_name
-     *  4  last_name
-     *  5  email
-     *  6  phone_number
-     *  7  address
-     *  8  employment_type
-     *  9  position
-     * 10  department
-     * 11  date_hired
-     * 12  base_rate          ← correct for CREATE (no date_separated here)
-     * 13  rate_type
-     * 14  sss_number
-     * 15  philhealth_number
-     * 16  pagibig_number
-     * 17  tin
-     * 18  is_active
-     * 19  created_by
-     * 20  created_at
      */
     private void setCreateParameters(PreparedStatement stmt, Employee employee) throws SQLException {
         stmt.setString(1,  employee.getEmployeeCode());
@@ -220,33 +233,22 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
     }
 
     // -----------------------------------------------------------------------
-    // UPDATE  (THE FIX IS HERE)
+    // UPDATE
     // -----------------------------------------------------------------------
 
     /**
      * UPDATE SQL column order:
-     *  1  employee_code
-     *  2  first_name
-     *  3  middle_name
-     *  4  last_name
-     *  5  email
-     *  6  phone_number
-     *  7  address
-     *  8  employment_type
-     *  9  position
-     * 10  department
-     * 11  date_hired
-     * 12  date_separated    ← EXTRA column vs CREATE — this was causing the bug
-     * 13  base_rate
-     * 14  rate_type
-     * 15  sss_number
-     * 16  philhealth_number
-     * 17  pagibig_number
-     * 18  tin
-     * 19  is_active
-     * 20  updated_by
-     * 21  updated_at
-     * 22  employee_id  (WHERE clause)
+     *  1  employee_code      12  date_separated  (EXTRA vs CREATE — was causing the bug)
+     *  2  first_name         13  base_rate
+     *  3  middle_name        14  rate_type
+     *  4  last_name          15  sss_number
+     *  5  email              16  philhealth_number
+     *  6  phone_number       17  pagibig_number
+     *  7  address            18  tin
+     *  8  employment_type    19  is_active
+     *  9  position           20  updated_by
+     * 10  department         21  updated_at
+     * 11  date_hired         22  employee_id  (WHERE clause)
      */
     @Override
     public boolean update(Employee employee) throws SQLException {
@@ -266,7 +268,6 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
         try (Connection conn = dbManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-            // ── Params 1–10: basic info ────────────────────────────────
             stmt.setString(1,  employee.getEmployeeCode());
             stmt.setString(2,  employee.getFirstName());
             stmt.setString(3,  employee.getMiddleName());
@@ -277,31 +278,21 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
             stmt.setString(8,  employee.getEmploymentType().name());
             stmt.setString(9,  employee.getPosition());
             stmt.setString(10, employee.getDepartment());
-
-            // ── Params 11–12: hire / separation dates ─────────────────
-            stmt.setDate(11, Date.valueOf(employee.getDateHired()));
+            stmt.setDate(11,   Date.valueOf(employee.getDateHired()));
             if (employee.getDateSeparated() != null) {
                 stmt.setDate(12, Date.valueOf(employee.getDateSeparated()));
             } else {
                 stmt.setNull(12, Types.DATE);
             }
-
-            // ── Params 13–14: compensation ────────────────────────────
-            stmt.setBigDecimal(13, employee.getBaseRate());   // ← was getting "DAILY" before fix
+            stmt.setBigDecimal(13, employee.getBaseRate());
             stmt.setString(14,     employee.getRateType().name());
-
-            // ── Params 15–18: government IDs ──────────────────────────
             stmt.setString(15, employee.getSssNumber());
             stmt.setString(16, employee.getPhilhealthNumber());
             stmt.setString(17, employee.getPagibigNumber());
             stmt.setString(18, employee.getTin());
-
-            // ── Params 19–21: status & audit ──────────────────────────
             stmt.setBoolean(19, employee.isActive());
             stmt.setObject(20,  employee.getUpdatedBy());
             stmt.setTimestamp(21, Timestamp.valueOf(LocalDateTime.now()));
-
-            // ── Param 22: WHERE clause ────────────────────────────────
             stmt.setInt(22, employee.getEmployeeId());
 
             int affectedRows = stmt.executeUpdate();

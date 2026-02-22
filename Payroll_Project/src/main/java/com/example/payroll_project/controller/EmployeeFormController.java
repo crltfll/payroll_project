@@ -18,10 +18,12 @@ import java.sql.SQLException;
  * FIXES APPLIED:
  * 1. getText() NPE — replaced every raw .getText().trim() with null-safe
  *    helper getText(field) so a missing fx:id never crashes the app.
- * 2. setEmployee() NPE — all setText() calls now guard against null getters
- *    (e.g. getBaseRate() returning null after DB corruption).
+ * 2. setEmployee() NPE — all setText() calls now guard against null getters.
  * 3. baseRateField.setText() — uses BigDecimal safely; defaults to empty
  *    string so the user is prompted to enter a valid rate.
+ * 4. createOrReactivate() — when adding a new employee whose code was
+ *    previously soft-deleted, the old row is reactivated instead of
+ *    attempting a duplicate INSERT (which threw a UNIQUE constraint error).
  */
 public class EmployeeFormController {
 
@@ -57,26 +59,22 @@ public class EmployeeFormController {
     // Null-safe helpers
     // -----------------------------------------------------------------------
 
-    /** Returns trimmed text or "" when the field or its value is null. */
     private String getText(TextField field) {
         if (field == null) return "";
         String val = field.getText();
         return val != null ? val.trim() : "";
     }
 
-    /** Returns trimmed text or "" for a TextArea. */
     private String getText(TextArea area) {
         if (area == null) return "";
         String val = area.getText();
         return val != null ? val.trim() : "";
     }
 
-    /** Sets text safely — converts null value to empty string. */
     private void setText(TextField field, String value) {
         if (field != null) field.setText(value != null ? value : "");
     }
 
-    /** Sets text safely for a TextArea. */
     private void setText(TextArea area, String value) {
         if (area != null) area.setText(value != null ? value : "");
     }
@@ -121,12 +119,11 @@ public class EmployeeFormController {
             setText(pagibigNumberField,     employee.getPagibigNumber());
             setText(tinField,               employee.getTin());
 
-            // Base rate — guard against null or ZERO left over from DB fix
             BigDecimal rate = employee.getBaseRate();
             if (rate != null && rate.compareTo(BigDecimal.ZERO) > 0) {
                 setText(baseRateField, rate.toPlainString());
             } else {
-                setText(baseRateField, ""); // force user to re-enter correct rate
+                setText(baseRateField, "");
             }
 
             if (employee.getEmploymentType() != null)
@@ -150,7 +147,8 @@ public class EmployeeFormController {
     private void handleSave() {
         if (validateInput()) {
             try {
-                if (employee == null) {
+                boolean isNew = (employee == null);
+                if (isNew) {
                     employee = new Employee();
                 }
 
@@ -173,9 +171,12 @@ public class EmployeeFormController {
                 employee.setTin(getText(tinField));
                 employee.setActive(activeCheckbox.isSelected());
 
-                if (employee.getEmployeeId() == null) {
-                    employeeDAO.create(employee);
-                    logger.info("Created new employee: {}", employee.getEmployeeCode());
+                if (isNew) {
+                    // FIX: use createOrReactivate so that re-entering a previously
+                    // deactivated employee code reactivates the old row instead of
+                    // failing with a UNIQUE constraint violation.
+                    employeeDAO.createOrReactivate(employee);
+                    logger.info("Created/reactivated employee: {}", employee.getEmployeeCode());
                 } else {
                     employeeDAO.update(employee);
                     logger.info("Updated employee: {}", employee.getEmployeeCode());
