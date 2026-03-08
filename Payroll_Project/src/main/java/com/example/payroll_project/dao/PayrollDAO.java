@@ -182,7 +182,6 @@ public class PayrollDAO implements BaseDAO<PayrollRecord, Integer> {
         }
     }
 
-    // -----------------------------------------------------------------------
 
     private PayrollRecord map(ResultSet rs) throws SQLException {
         PayrollRecord r = new PayrollRecord();

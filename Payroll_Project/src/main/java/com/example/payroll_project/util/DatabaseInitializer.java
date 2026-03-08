@@ -15,14 +15,10 @@ public class DatabaseInitializer {
             System.out.println("=== KC-02N Payroll System - Database Initializer ===");
             System.out.println();
             
-            // Load SQLite driver
             Class.forName("org.sqlite.JDBC");
-            
-            // Connect to database
             Connection conn = DriverManager.getConnection(DB_URL);
             System.out.println("✓ Connected to database: " + DB_URL);
             
-            // Check if users table exists
             boolean usersTableExists = checkUsersTable(conn);
             if (!usersTableExists) {
                 System.out.println("✗ Users table does not exist!");
@@ -30,15 +26,12 @@ public class DatabaseInitializer {
                 createUsersTable(conn);
             }
             
-            // Delete existing admin user (if any)
             System.out.println("\n→ Removing any existing admin user...");
             deleteAdminUser(conn);
             
-            // Create new admin user
             System.out.println("→ Creating admin user...");
             createAdminUser(conn);
             
-            // Verify admin user
             System.out.println("\n→ Verifying admin user...");
             verifyAdminUser(conn);
             
@@ -101,7 +94,6 @@ public class DatabaseInitializer {
     }
     
     private static void createAdminUser(Connection conn) throws Exception {
-        // Generate BCrypt hash for 'admin123'
         String password = "admin123";
         String passwordHash = BCrypt.hashpw(password, BCrypt.gensalt(12));
         

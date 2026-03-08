@@ -20,47 +20,37 @@ public class Employee {
         MONTHLY
     }
 
-    // Primary Key
     private Integer employeeId;
 
-    // Basic Information
     private String employeeCode;  // Must match FA2000 device ID
     private String firstName;
     private String middleName;
     private String lastName;
-
-    // Contact Information
     private String email;
     private String phoneNumber;
     private String address;
 
-    // Employment Details
     private EmploymentType employmentType;
     private String position;
     private String department;
     private LocalDate dateHired;
     private LocalDate dateSeparated;
 
-    // Compensation
     private BigDecimal baseRate;
     private RateType rateType;
 
-    // Government IDs
     private String sssNumber;
     private String philhealthNumber;
     private String pagibigNumber;
     private String tin;
 
-    // Status
     private boolean active;
 
-    // Audit
     private Integer createdBy;
     private LocalDateTime createdAt;
     private Integer updatedBy;
     private LocalDateTime updatedAt;
 
-    // Constructors
     public Employee() {
         this.active    = true;
         this.createdAt = LocalDateTime.now();
@@ -73,7 +63,6 @@ public class Employee {
         this.lastName     = lastName;
     }
 
-    // Helper methods
     public String getFullName() {
         StringBuilder sb = new StringBuilder(firstName != null ? firstName : "");
         if (middleName != null && !middleName.isBlank())
@@ -97,7 +86,6 @@ public class Employee {
             && dateHired     != null;
     }
 
-    // ── Getters & Setters ─────────────────────────────────────────────────
 
     public Integer getEmployeeId()               { return employeeId; }
     public void setEmployeeId(Integer v)         { this.employeeId = v; }

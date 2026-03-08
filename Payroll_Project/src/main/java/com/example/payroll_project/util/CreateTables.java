@@ -11,7 +11,7 @@ public class CreateTables {
     
     public static void main(String[] args) {
         try {
-            System.out.println("=== KC-02N Payroll System - Table Creator ===\n");
+            System.out.println("KC-02N Payroll System - Table Creator\n");
             
             DatabaseManager dbManager = DatabaseManager.getInstance();
             dbManager.initialize();
@@ -19,11 +19,9 @@ public class CreateTables {
             Connection conn = dbManager.getConnection();
             Statement stmt = conn.createStatement();
             
-            // Enable foreign keys
             stmt.execute("PRAGMA foreign_keys = ON");
             System.out.println("✓ Foreign keys enabled\n");
             
-            // Create employees table
             System.out.println("Creating employees table...");
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS employees (
@@ -55,7 +53,6 @@ public class CreateTables {
             """);
             System.out.println("  ✓ Employees table created");
             
-            // Create attendance_records table
             System.out.println("Creating attendance_records table...");
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS attendance_records (
@@ -89,7 +86,6 @@ public class CreateTables {
             """);
             System.out.println("  ✓ Attendance_records table created");
             
-            // Create payroll tables
             System.out.println("Creating payroll tables...");
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS pay_periods (
@@ -138,7 +134,6 @@ public class CreateTables {
             """);
             System.out.println("  ✓ Payroll_records table created");
             
-            // Create audit log
             System.out.println("Creating audit_log table...");
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS audit_log (
@@ -158,8 +153,7 @@ public class CreateTables {
             
             stmt.close();
             
-            // Verify tables
-            System.out.println("\n=== Verifying Tables ===");
+            System.out.println("\nVerifying Tables");
             Statement verifyStmt = conn.createStatement();
             var rs = verifyStmt.executeQuery(
                 "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
@@ -171,7 +165,7 @@ public class CreateTables {
                 count++;
             }
             
-            System.out.println("\n=== Success! ===");
+            System.out.println("\nSuccess!");
             System.out.println("Created " + count + " tables successfully.");
             System.out.println("\nYou can now:");
             System.out.println("  1. Add employees");

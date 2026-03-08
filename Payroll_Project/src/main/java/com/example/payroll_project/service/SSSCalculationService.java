@@ -6,19 +6,13 @@ import java.math.RoundingMode;
 /**
  * SSS Contribution Calculation Service (CR3.1)
  * Based on RA 11199 (Social Security Act of 2018) – 2024 schedule.
- *
- * Total rate : 14%   (Employee 4.5% + Employer 9.5%)
- * MSC range  : ₱4,000 – ₱30,000
  */
 public class SSSCalculationService {
 
     private static final BigDecimal EMPLOYEE_RATE = new BigDecimal("0.045");
     private static final BigDecimal EMPLOYER_RATE = new BigDecimal("0.095");
 
-    /**
-     * MSC lookup table: { salaryFrom (inclusive), salaryTo (inclusive), MSC }
-     * All values in pesos (integer for speed; no cents in this table).
-     */
+
     private static final int[][] MSC_TABLE = {
         {     0,  4249,  4000},
         {  4250,  4749,  4500},
@@ -75,7 +69,6 @@ public class SSSCalculationService {
         { 29750, Integer.MAX_VALUE, 30000}
     };
 
-    // -----------------------------------------------------------------------
 
     public BigDecimal calculateEmployeeContribution(BigDecimal monthlySalary) {
         return getMSC(monthlySalary).multiply(EMPLOYEE_RATE).setScale(2, RoundingMode.HALF_UP);
@@ -98,7 +91,6 @@ public class SSSCalculationService {
         return new BigDecimal("30000"); // cap
     }
 
-    /** Transparency detail string (F1) */
     public String getComputationDetails(BigDecimal monthlySalary) {
         BigDecimal msc          = getMSC(monthlySalary);
         BigDecimal contribution = calculateEmployeeContribution(monthlySalary);

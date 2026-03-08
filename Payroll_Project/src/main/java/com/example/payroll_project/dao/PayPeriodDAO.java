@@ -91,7 +91,6 @@ public class PayPeriodDAO implements BaseDAO<PayPeriod, Integer> {
         }
     }
 
-    /** Cannot delete finalized pay periods (regulatory). */
     @Override
     public boolean delete(Integer id) throws SQLException {
         Optional<PayPeriod> pp = findById(id);
@@ -125,9 +124,6 @@ public class PayPeriodDAO implements BaseDAO<PayPeriod, Integer> {
         }
     }
 
-    /**
-     * Check if a pay period with the same start_date + end_date already exists.
-     */
     public Optional<PayPeriod> findByStartAndEnd(LocalDate start, LocalDate end) throws SQLException {
         try (Connection c = db.getConnection();
              PreparedStatement ps = c.prepareStatement(

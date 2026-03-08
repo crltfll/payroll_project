@@ -40,14 +40,12 @@ import java.util.regex.Pattern;
  *   8  = Time2 Out  (regular end / afternoon out)
  *   10 = OT In      (OT start, or final clock-out when no separate end punch)
  *   12 = OT Out     (OT end / final clock-out)
- *
- * Multiple employees are placed side by side, each occupying BLOCK_WIDTH (15) columns.
  */
 public class FA2000CSVParser {
 
     private static final Logger logger = LoggerFactory.getLogger(FA2000CSVParser.class);
 
-    // Column offsets within each 15-column employee block
+
     private static final int COL_DATE      = 0;
     private static final int COL_TIME1_IN  = 1;
     private static final int COL_TIME1_OUT = 3;
@@ -63,15 +61,11 @@ public class FA2000CSVParser {
     private static final Pattern DATE_RANGE_PATTERN = Pattern.compile(
             "(\\d{4}-\\d{2}-\\d{2})\\s*~\\s*(\\d{4}-\\d{2}-\\d{2})");
 
-    // -----------------------------------------------------------------------
-    // Public API
-    // -----------------------------------------------------------------------
+
 
     /**
      * Parse all employees found in an FA2000 All_Report CSV file.
      *
-     * @param filePath absolute path to the CSV file
-     * @return map of employeeCode → list of daily AttendanceRecord
      */
     public static Map<String, List<AttendanceRecord>> parseAllEmployees(String filePath) throws IOException {
         logger.info("Parsing FA2000 All_Report CSV: {}", filePath);
@@ -87,7 +81,6 @@ public class FA2000CSVParser {
 
             List<CSVRecord> rows = csvParser.getRecords();
 
-            // 1. Detect how many employee blocks have data
             List<EmployeeBlock> blocks = detectEmployeeBlocks(rows);
             if (blocks.isEmpty()) {
                 logger.warn("No employee blocks detected in CSV");
@@ -95,7 +88,6 @@ public class FA2000CSVParser {
             }
             logger.info("Detected {} employee block(s)", blocks.size());
 
-            // 2. Find the row where attendance data begins
             int dataStart = findDataStartRow(rows);
             if (dataStart == -1) {
                 logger.warn("Could not locate attendance data rows");
@@ -103,7 +95,6 @@ public class FA2000CSVParser {
             }
             logger.info("Data starts at row index {}", dataStart);
 
-            // 3. Parse each employee block
             for (EmployeeBlock block : blocks) {
                 List<AttendanceRecord> records = parseEmployeeBlock(
                         rows, dataStart, block);
@@ -118,10 +109,7 @@ public class FA2000CSVParser {
         return result;
     }
 
-    /**
-     * Convenience method: returns all attendance records as a flat list
-     * (backward-compatible with the original single-employee signature).
-     */
+
     public static List<AttendanceRecord> parseCSV(String filePath) throws IOException {
         Map<String, List<AttendanceRecord>> all = parseAllEmployees(filePath);
         List<AttendanceRecord> flat = new ArrayList<>();
@@ -129,18 +117,12 @@ public class FA2000CSVParser {
         return flat;
     }
 
-    // -----------------------------------------------------------------------
-    // Block detection
-    // -----------------------------------------------------------------------
+
 
     private static List<EmployeeBlock> detectEmployeeBlocks(List<CSVRecord> rows) {
         List<EmployeeBlock> blocks = new ArrayList<>();
 
-        // Employee metadata rows (0-indexed):
-        //   Row 2 (Dept/Name row): Name label at col (8 + blockIdx*15), value at col (9 + blockIdx*15)
-        //   Row 3 (Date/ID row)  : ID   label at col (8 + blockIdx*15), value at col (9 + blockIdx*15)
 
-        // Try to read date range from row 1
         LocalDate[] dateRange = extractDateRange(rows);
 
         for (int blockIdx = 0; blockIdx < 10; blockIdx++) {
@@ -149,16 +131,14 @@ public class FA2000CSVParser {
 
             if (rows.size() < 4) break;
 
-            CSVRecord row3 = rows.get(3); // 0-indexed row 3 = 4th row
+            CSVRecord row3 = rows.get(3);
 
             String idLabel = safeGet(row3, idLabelCol);
             String idValue = safeGet(row3, idValueCol);
 
-            // An employee block is valid if the "ID" label is present and has a numeric value
             if ("ID".equalsIgnoreCase(idLabel) && idValue != null && idValue.matches("\\d+")) {
                 String empCode  = String.format("EMP%03d", Integer.parseInt(idValue));
 
-                // Try to get employee name from row 2
                 CSVRecord row2   = rows.get(2);
                 String nameLabel = safeGet(row2, idLabelCol);    // "Name"
                 String empName   = safeGet(row2, idValueCol);    // actual name
@@ -167,7 +147,7 @@ public class FA2000CSVParser {
                 blocks.add(new EmployeeBlock(blockIdx, empCode, empName,
                         blockIdx * BLOCK_WIDTH, dateRange));
             } else {
-                // Once we find an empty/invalid block, stop scanning
+
                 if (blockIdx > 0) break;
             }
         }
@@ -175,9 +155,7 @@ public class FA2000CSVParser {
         return blocks;
     }
 
-    // -----------------------------------------------------------------------
-    // Row parsing
-    // -----------------------------------------------------------------------
+
 
     private static int findDataStartRow(List<CSVRecord> rows) {
         for (int i = 0; i < rows.size(); i++) {
@@ -212,12 +190,10 @@ public class FA2000CSVParser {
 
             int day = Integer.parseInt(dm.group(1));
 
-            // Detect month rollover (e.g. Jan 26 → Feb 10)
             LocalDate attendanceDate = resolveDate(year, month, day, prevDate, block.dateRange);
             if (attendanceDate == null) continue;
             prevDate = attendanceDate;
 
-            // Parse punches
             LocalTime time1In  = parseTime(safeGet(row, offset + COL_TIME1_IN));
             LocalTime time1Out = parseTime(safeGet(row, offset + COL_TIME1_OUT));
             LocalTime time2In  = parseTime(safeGet(row, offset + COL_TIME2_IN));
@@ -225,30 +201,21 @@ public class FA2000CSVParser {
             LocalTime otIn     = parseTime(safeGet(row, offset + COL_OT_IN));
             LocalTime otOut    = parseTime(safeGet(row, offset + COL_OT_OUT));
 
-            // Build the record
             AttendanceRecord rec = new AttendanceRecord();
             rec.setAttendanceDate(attendanceDate);
 
-            // Assign morning clock-in
             rec.setTimeIn1(time1In);
 
-            // Determine final clock-out using best available punch:
-            //   OT Out > Time2 Out > OT In (some devices record final punch as OT In)
             if (otOut != null) {
                 rec.setTimeOut2(otOut);
             } else if (time2Out != null) {
                 rec.setTimeOut2(time2Out);
             } else if (otIn != null) {
-                // FA2000 sometimes records the end-of-day punch as "OT In"
-                // when there is no separate OT end punch
                 rec.setTimeOut2(otIn);
             }
 
-            // Lunch punches (only if both present and sensible)
             if (time1Out != null) rec.setTimeOut1(time1Out);
             if (time2In  != null) rec.setTimeIn2(time2In);
-
-            // Mark absent if no punches at all
             if (time1In == null && time1Out == null && time2In == null
                     && time2Out == null && otIn == null && otOut == null) {
                 rec.setAbsent(true);
@@ -261,17 +228,10 @@ public class FA2000CSVParser {
         return records;
     }
 
-    // -----------------------------------------------------------------------
-    // Date resolution
-    // -----------------------------------------------------------------------
 
-    /**
-     * Resolve a day-of-month number to a full LocalDate, handling month roll-over
-     * within the report's date range.
-     */
+
     private static LocalDate resolveDate(int baseYear, int baseMonth, int day,
                                           LocalDate prevDate, LocalDate[] range) {
-        // Try base month first
         try {
             LocalDate d = LocalDate.of(baseYear, baseMonth, day);
             if (!d.isBefore(range[0]) && !d.isAfter(range[1])) {
@@ -279,7 +239,6 @@ public class FA2000CSVParser {
             }
         } catch (Exception ignored) { /* invalid day in month */ }
 
-        // Try next month
         try {
             int nextMonth = baseMonth == 12 ? 1  : baseMonth + 1;
             int nextYear  = baseMonth == 12 ? baseYear + 1 : baseYear;
@@ -292,9 +251,6 @@ public class FA2000CSVParser {
         return null;
     }
 
-    // -----------------------------------------------------------------------
-    // Metadata extraction
-    // -----------------------------------------------------------------------
 
     private static LocalDate[] extractDateRange(List<CSVRecord> rows) {
         LocalDate now = LocalDate.now();
@@ -317,28 +273,25 @@ public class FA2000CSVParser {
         return range;
     }
 
-    // -----------------------------------------------------------------------
-    // Anomaly detection (F3)
-    // -----------------------------------------------------------------------
 
     private static void detectAnomalies(AttendanceRecord rec) {
         if (rec.isAbsent()) return;
 
         List<String> anomalies = new ArrayList<>();
 
-        // Missing clock-in but has clock-out
+
         if (rec.getTimeIn1() == null && rec.getTimeOut2() != null) {
             anomalies.add("Missing morning clock-in");
         }
-        // Has clock-in but missing clock-out
+
         if (rec.getTimeIn1() != null && rec.getTimeOut2() == null) {
             anomalies.add("Missing clock-out");
         }
-        // Incomplete lunch punches
+
         if ((rec.getTimeOut1() == null) != (rec.getTimeIn2() == null)) {
             anomalies.add("Incomplete lunch break punches");
         }
-        // Impossible sequences
+
         if (rec.getTimeIn1() != null && rec.getTimeOut1() != null
                 && rec.getTimeOut1().isBefore(rec.getTimeIn1())) {
             anomalies.add("Lunch-out before clock-in");
@@ -347,7 +300,7 @@ public class FA2000CSVParser {
                 && rec.getTimeOut2().isBefore(rec.getTimeIn2())) {
             anomalies.add("Clock-out before afternoon clock-in");
         }
-        // Very short shift (< 4 hours)
+
         if (rec.getTimeIn1() != null && rec.getTimeOut2() != null) {
             long mins = java.time.Duration.between(rec.getTimeIn1(), rec.getTimeOut2()).toMinutes();
             if (mins > 0 && mins < 240) {
@@ -361,9 +314,7 @@ public class FA2000CSVParser {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
+
 
     private static String safeGet(CSVRecord row, int index) {
         if (index >= row.size()) return null;
@@ -383,9 +334,6 @@ public class FA2000CSVParser {
         return null;
     }
 
-    // -----------------------------------------------------------------------
-    // Inner classes
-    // -----------------------------------------------------------------------
 
     private static class EmployeeBlock {
         final int       blockIndex;

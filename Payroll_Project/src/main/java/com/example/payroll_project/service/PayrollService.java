@@ -26,7 +26,7 @@ public class PayrollService {
 
     private static final Logger logger = LoggerFactory.getLogger(PayrollService.class);
 
-    // Premium rates (Philippine Labor Code)
+
     private static final BigDecimal OT_RATE_REGULAR     = new BigDecimal("1.25");
     private static final BigDecimal OT_RATE_REST_DAY    = new BigDecimal("1.30");
     private static final BigDecimal OT_RATE_HOLIDAY     = new BigDecimal("2.00");
@@ -40,23 +40,13 @@ public class PayrollService {
     private final PagIBIGCalculationService   pagIbig       = new PagIBIGCalculationService();
     private final BIRTaxCalculationService    bir           = new BIRTaxCalculationService();
 
-    // -----------------------------------------------------------------------
 
-    /**
-     * Compute a full payroll record for one employee in one pay period.
-     *
-     * @param employee    employee master data (base rate, rate type, etc.)
-     * @param payPeriod   the pay period being processed
-     * @param attendance  attendance records for this employee within the period
-     * @return fully computed PayrollRecord (not yet persisted)
-     */
     public PayrollRecord compute(Employee employee, PayPeriod payPeriod,
                                   List<AttendanceRecord> attendance) {
 
         PayrollRecord pr = new PayrollRecord(payPeriod.getPayPeriodId(),
                                               employee.getEmployeeId());
 
-        // 1. Work-hours summary
         WorkHoursCalculationService.WorkHoursSummary hours =
                 hoursService.calculate(attendance, employee);
 
@@ -69,46 +59,38 @@ public class PayrollService {
         pr.setTotalLateMinutes(hours.totalLateMinutes);
         pr.setTotalUndertimeMinutes(hours.totalUndertimeMinutes);
 
-        // 2. Derive effective monthly salary (normalize to monthly for deduction calc)
         BigDecimal monthlyRate = toMonthlySalary(employee, payPeriod);
 
-        // 3. Hourly rate for premium calculations
         BigDecimal dailyRate  = toDailyRate(employee);
         BigDecimal hourlyRate = dailyRate.divide(new BigDecimal("8"), 4, RoundingMode.HALF_UP);
 
-        // 4. Basic pay (regular hours worked × hourly rate)
         BigDecimal basicPay = hours.totalRegularHours
                 .multiply(hourlyRate)
                 .setScale(2, RoundingMode.HALF_UP);
         pr.setBasicPay(basicPay);
 
-        // 5. Overtime pay
         BigDecimal otPay = hours.totalOvertimeHours
                 .multiply(hourlyRate)
                 .multiply(OT_RATE_REGULAR)
                 .setScale(2, RoundingMode.HALF_UP);
         pr.setOvertimePay(otPay);
 
-        // 6. Night differential pay (additional 10% on night hours already in basic)
         BigDecimal ndExtra = hours.totalNightDiffHours
                 .multiply(hourlyRate)
                 .multiply(new BigDecimal("0.10"))
                 .setScale(2, RoundingMode.HALF_UP);
         pr.setNightDiffPay(ndExtra);
 
-        // 7. Holiday pay
         BigDecimal holPay = hours.totalHolidayHours
                 .multiply(hourlyRate)
                 .multiply(HOLIDAY_RATE)
                 .setScale(2, RoundingMode.HALF_UP);
         pr.setHolidayPay(holPay);
 
-        // 8. Gross pay
         BigDecimal grossPay = basicPay.add(otPay).add(ndExtra).add(holPay)
                 .add(pr.getTotalAllowances());
         pr.setGrossPay(grossPay);
 
-        // 9. Statutory deductions (based on annualized / monthly rate)
         BigDecimal sssContrib       = sss.calculateEmployeeContribution(monthlyRate);
         BigDecimal philHealthContrib = philHealth.calculateEmployeeContribution(monthlyRate);
         BigDecimal pagIbigContrib   = pagIbig.calculateEmployeeContribution(monthlyRate);
@@ -117,7 +99,6 @@ public class PayrollService {
         pr.setPhilhealthContribution(philHealthContrib);
         pr.setPagibigContribution(pagIbigContrib);
 
-        // 10. Taxable income for BIR
         BigDecimal taxableIncome = grossPay
                 .subtract(pr.getNonTaxableAllowances())
                 .subtract(sssContrib)
@@ -128,7 +109,6 @@ public class PayrollService {
         BigDecimal withholdingTax = bir.calculateMonthlyTax(taxableIncome);
         pr.setWithholdingTax(withholdingTax);
 
-        // 11. Total deductions and net pay
         BigDecimal totalDeductions = sssContrib
                 .add(philHealthContrib)
                 .add(pagIbigContrib)
@@ -137,7 +117,6 @@ public class PayrollService {
         pr.setTotalDeductions(totalDeductions);
         pr.setNetPay(grossPay.subtract(totalDeductions).max(BigDecimal.ZERO));
 
-        // 12. Save computation details for F1 (Transparency)
         pr.setComputationDetails(buildTransparencyDetails(
                 employee, hourlyRate, hours, pr, taxableIncome, monthlyRate));
 
@@ -146,10 +125,6 @@ public class PayrollService {
 
         return pr;
     }
-
-    // -----------------------------------------------------------------------
-    // Rate helpers
-    // -----------------------------------------------------------------------
 
     private BigDecimal toMonthlySalary(Employee emp, PayPeriod period) {
         BigDecimal rate = emp.getBaseRate();
@@ -171,10 +146,6 @@ public class PayrollService {
             case HOURLY  -> rate.multiply(new BigDecimal("8"));
         };
     }
-
-    // -----------------------------------------------------------------------
-    // Transparency (F1)
-    // -----------------------------------------------------------------------
 
     private String buildTransparencyDetails(
             Employee emp,

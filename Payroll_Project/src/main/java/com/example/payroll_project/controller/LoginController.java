@@ -47,12 +47,10 @@ public class LoginController {
         userService = new UserService();
         loadingIndicator.setVisible(false);
         errorLabel.setVisible(false);
-        
-        // Enter key to login
+
         passwordField.setOnKeyPressed(this::handleKeyPress);
         usernameField.setOnKeyPressed(this::handleKeyPress);
-        
-        // Focus on username field
+
         javafx.application.Platform.runLater(() -> usernameField.requestFocus());
     }
     
@@ -61,7 +59,6 @@ public class LoginController {
         String username = usernameField.getText().trim();
         String password = passwordField.getText();
         
-        // Validation
         if (username.isEmpty()) {
             showError("Please enter your username");
             usernameField.requestFocus();
@@ -74,11 +71,9 @@ public class LoginController {
             return;
         }
         
-        // Show loading
         setLoading(true);
         errorLabel.setVisible(false);
         
-        // Authenticate in background thread
         new Thread(() -> {
             try {
                 Optional<User> userOpt = userService.authenticate(username, password);

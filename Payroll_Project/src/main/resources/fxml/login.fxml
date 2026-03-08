@@ -5,13 +5,11 @@
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Text?>
 
-<!-- FIXED: removed prefWidth="1280" prefHeight="768" — sizing handled by PayrollApplication -->
 <BorderPane xmlns="http://javafx.com/javafx/21"
             xmlns:fx="http://javafx.com/fxml/1"
             fx:controller="com.example.payroll_project.controller.LoginController"
             styleClass="login-root">
     
-    <!-- Left Panel - Branding -->
     <left>
         <VBox styleClass="login-brand-panel" alignment="CENTER" spacing="30"
               minWidth="360" prefWidth="420">
@@ -59,7 +57,6 @@
         </VBox>
     </left>
     
-    <!-- Right Panel - Login Form with ScrollPane for small screens -->
     <center>
         <ScrollPane fitToWidth="true" fitToHeight="true"
                     hbarPolicy="NEVER" vbarPolicy="AS_NEEDED"

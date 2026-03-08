@@ -31,10 +31,6 @@ import java.util.Optional;
 /**
  * Payroll Controller (CR4, CR6, F1, F12)
  *
- * FIX 1: Auto-selects the most recently created pay period on startup so
- *         payroll records are visible without requiring a manual "Select" click.
- *
- * FIX 2: Added Delete button for non-locked (DRAFT / PROCESSING) pay periods.
  */
 public class PayrollController {
 
@@ -43,7 +39,6 @@ public class PayrollController {
             NumberFormat.getCurrencyInstance(new Locale("en", "PH"));
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM dd, yyyy");
 
-    // ── Pay Period Section ────────────────────────────────────────────────
     @FXML private TextField periodNameField;
     @FXML private DatePicker startDatePicker;
     @FXML private DatePicker endDatePicker;
@@ -56,7 +51,6 @@ public class PayrollController {
     @FXML private TableColumn<PayPeriod, String> colPeriodStatus;
     @FXML private TableColumn<PayPeriod, Void>   colPeriodActions;
 
-    // ── Payroll Processing Section ────────────────────────────────────────
     @FXML private Label selectedPeriodLabel;
     @FXML private Label totalEmployeesLabel;
     @FXML private Label totalGrossLabel;
@@ -72,10 +66,8 @@ public class PayrollController {
     @FXML private TableColumn<PayrollRecord, String> colNetPay;
     @FXML private TableColumn<PayrollRecord, Void>   colPayrollActions;
 
-    // ── Transparency Panel (F1) ───────────────────────────────────────────
     @FXML private TextArea transparencyTextArea;
 
-    // DAOs & Services
     private final PayPeriodDAO   periodDAO   = new PayPeriodDAO();
     private final PayrollDAO     payrollDAO  = new PayrollDAO();
     private final EmployeeDAO    empDAO      = new EmployeeDAO();
@@ -89,7 +81,6 @@ public class PayrollController {
     private PayPeriod selectedPeriod;
     private java.util.Map<Integer, Employee> empCache = new java.util.HashMap<>();
 
-    // -----------------------------------------------------------------------
 
     @FXML
     public void initialize() {
@@ -109,10 +100,6 @@ public class PayrollController {
         loadEmployeeCache();
     }
 
-    // -----------------------------------------------------------------------
-    // Pay Period Management
-    // -----------------------------------------------------------------------
-
     @FXML
     private void handleCreatePeriod() {
         String name  = periodNameField.getText().trim();
@@ -131,7 +118,6 @@ public class PayrollController {
 
         new Thread(() -> {
             try {
-                // Check for duplicate date range BEFORE inserting
                 Optional<PayPeriod> existing = periodDAO.findByStartAndEnd(s, e);
                 if (existing.isPresent()) {
                     PayPeriod dup = existing.get();
@@ -173,11 +159,7 @@ public class PayrollController {
         loadPayPeriods(false);
     }
 
-    /**
-     * @param autoSelectFirst when true, automatically selects and loads the most
-     *                        recently created period (so payroll records appear on
-     *                        startup without a manual "Select" click).
-     */
+
     private void loadPayPeriods(boolean autoSelectFirst) {
         new Thread(() -> {
             try {
@@ -218,7 +200,6 @@ public class PayrollController {
         colPeriodStatus.setCellValueFactory(c ->
                 new SimpleStringProperty(c.getValue().getStatus().name()));
 
-        // Status badge
         colPeriodStatus.setCellFactory(col -> new TableCell<>() {
             @Override protected void updateItem(String item, boolean empty) {
                 super.updateItem(item, empty);
@@ -235,7 +216,6 @@ public class PayrollController {
             }
         });
 
-        // Actions — Select, Finalize, Delete
         colPeriodActions.setCellFactory(col -> new TableCell<>() {
             private final Button selectBtn   = new Button("Select");
             private final Button finalizeBtn = new Button("Finalize");
@@ -301,10 +281,7 @@ public class PayrollController {
         });
     }
 
-    /**
-     * FIX: Delete a pay period (only allowed when it is NOT locked / finalized).
-     * Also removes all associated payroll records to keep the DB consistent.
-     */
+
     private void handleDeletePeriod(PayPeriod pp) {
         if (pp.isLocked()) {
             alert(Alert.AlertType.WARNING, "Cannot Delete",
@@ -324,7 +301,6 @@ public class PayrollController {
             if (resp != ButtonType.OK) return;
             new Thread(() -> {
                 try {
-                    // Delete payroll records first (FK constraint)
                     List<PayrollRecord> associated =
                             payrollDAO.findByPayPeriod(pp.getPayPeriodId());
                     for (PayrollRecord pr : associated) {
@@ -333,7 +309,6 @@ public class PayrollController {
                     periodDAO.delete(pp.getPayPeriodId());
 
                     Platform.runLater(() -> {
-                        // Clear selection if deleted period was selected
                         if (selectedPeriod != null &&
                                 selectedPeriod.getPayPeriodId().equals(pp.getPayPeriodId())) {
                             selectedPeriod = null;
@@ -353,9 +328,6 @@ public class PayrollController {
         });
     }
 
-    // -----------------------------------------------------------------------
-    // Payroll Processing
-    // -----------------------------------------------------------------------
 
     @FXML
     private void handleProcessPayroll() {
@@ -456,9 +428,6 @@ public class PayrollController {
         }).start();
     }
 
-    // -----------------------------------------------------------------------
-    // Transparency (F1)
-    // -----------------------------------------------------------------------
 
     @FXML
     private void handleShowTransparency() {
@@ -490,9 +459,6 @@ public class PayrollController {
         }).start();
     }
 
-    // -----------------------------------------------------------------------
-    // Payroll table setup
-    // -----------------------------------------------------------------------
 
     private void loadPayrollRecords(PayPeriod pp) {
         new Thread(() -> {
@@ -575,9 +541,6 @@ public class PayrollController {
         }).start();
     }
 
-    // -----------------------------------------------------------------------
-    // Helpers
-    // -----------------------------------------------------------------------
 
     private String fmt2(BigDecimal bd) {
         return bd != null ? String.format("%.2f", bd) : "0.00";

@@ -7,22 +7,10 @@ import java.math.RoundingMode;
  * BIR Withholding Tax Calculation Service (CR3.4)
  * Based on RA 10963 (TRAIN Law) – 2023-present revised table.
  *
- * Annual tax brackets:
- *   0       – 250,000 :   0%
- *   250,001 – 400,000 :  15% of excess over 250,000
- *   400,001 – 800,000 :  ₱22,500 + 20% of excess over 400,000
- *   800,001 – 2,000,000: ₱102,500 + 25% of excess over 800,000
- *   2,000,001 – 8,000,000: ₱402,500 + 30% of excess over 2,000,000
- *   8,000,001+             : ₱2,202,500 + 35% of excess over 8,000,000
- *
- * Taxable income = Gross income − non-taxable allowances − SSS − PhilHealth − Pag-IBIG
  */
 public class BIRTaxCalculationService {
 
-    /**
-     * Annual tax brackets: { lowerBound, baseTax, rate, excessOver }
-     * All amounts in pesos as doubles for lookup convenience.
-     */
+
     private static final double[][] BRACKETS = {
         {      250_000,         0,     0.00,         0},
         {      400_000,         0,     0.15,   250_000},
@@ -32,23 +20,14 @@ public class BIRTaxCalculationService {
         {Double.MAX_VALUE, 2_202_500, 0.35, 8_000_000},
     };
 
-    // -----------------------------------------------------------------------
 
-    /**
-     * Calculate monthly withholding tax from a monthly taxable income.
-     *
-     * @param monthlyTaxableIncome  gross - non-taxable allowances - SSS - PhilHealth - Pag-IBIG
-     *                               (for a MONTHLY pay period)
-     * @return monthly tax to withhold
-     */
-    public BigDecimal calculateMonthlyTax(BigDecimal monthlyTaxableIncome) {
-        if (monthlyTaxableIncome == null
-                || monthlyTaxableIncome.compareTo(BigDecimal.ZERO) <= 0) {
-            return BigDecimal.ZERO;
-        }
+     public BigDecimal calculateMonthlyTax(BigDecimal monthlyTaxableIncome) {
+     if (monthlyTaxableIncome == null
+     || monthlyTaxableIncome.compareTo(BigDecimal.ZERO) <= 0) {
+     return BigDecimal.ZERO;
+     }
 
-        // Annualise for bracket lookup, then de-annualise
-        double annual     = monthlyTaxableIncome.doubleValue() * 12;
+     double annual     = monthlyTaxableIncome.doubleValue() * 12;
         double annualTax  = computeAnnualTax(annual);
         double monthlyTax = annualTax / 12;
 
@@ -56,9 +35,7 @@ public class BIRTaxCalculationService {
                          .max(BigDecimal.ZERO);
     }
 
-    /**
-     * Calculate semi-monthly withholding tax.
-     */
+
     public BigDecimal calculateSemiMonthlyTax(BigDecimal semiMonthlyTaxableIncome) {
         if (semiMonthlyTaxableIncome == null
                 || semiMonthlyTaxableIncome.compareTo(BigDecimal.ZERO) <= 0) {
@@ -72,8 +49,6 @@ public class BIRTaxCalculationService {
                          .max(BigDecimal.ZERO);
     }
 
-    // -----------------------------------------------------------------------
-
     private double computeAnnualTax(double annualIncome) {
         if (annualIncome <= 250_000) return 0;
 
@@ -86,7 +61,6 @@ public class BIRTaxCalculationService {
         return 0;
     }
 
-    /** Transparency detail string (F1) */
     public String getComputationDetails(BigDecimal monthlyTaxableIncome) {
         if (monthlyTaxableIncome == null) return "BIR Tax: ₱0.00";
         double annual    = monthlyTaxableIncome.doubleValue() * 12;

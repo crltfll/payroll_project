@@ -17,8 +17,7 @@ import java.util.Locale;
  * Dashboard Home Controller
  * Displays system overview, statistics, and wires Quick-Action buttons.
  *
- * Quick-Action buttons navigate to other views via the parent DashboardController.
- * We walk up the scene graph to find it — no direct coupling needed.
+
  */
 public class DashboardHomeController {
 
@@ -35,8 +34,8 @@ public class DashboardHomeController {
     @FXML private Label systemStatusLabel;
     @FXML private TableView<?> recentAttendanceTable;
 
-    // Root node reference — set after initialize via the root VBox's scene
-    @FXML private javafx.scene.layout.VBox rootVBox; // implicit root from fx:id or just any node
+
+    @FXML private javafx.scene.layout.VBox rootVBox;
 
     private final EmployeeDAO employeeDAO = new EmployeeDAO();
 
@@ -44,10 +43,6 @@ public class DashboardHomeController {
     public void initialize() {
         loadStatistics();
     }
-
-    // -----------------------------------------------------------------------
-    // Statistics
-    // -----------------------------------------------------------------------
 
     private void loadStatistics() {
         new Thread(() -> {
@@ -71,11 +66,6 @@ public class DashboardHomeController {
             }
         }).start();
     }
-
-    // -----------------------------------------------------------------------
-    // Quick-Action handlers
-    // Navigate by finding the DashboardController in the scene graph.
-    // -----------------------------------------------------------------------
 
     @FXML
     private void handleQuickImportCSV() {
@@ -102,17 +92,10 @@ public class DashboardHomeController {
         navigateTo("reports");
     }
 
-    /**
-     * Find the DashboardController by inspecting the scene root's user data
-     * or by looking up the BorderPane that the sidebar buttons are attached to.
-     *
-     * DashboardController stores itself as userData on the BorderPane root
-     * (we add one line to DashboardController.initialize for this to work).
-     * If that is not present we fall back to a safe no-op.
-     */
+
     private void navigateTo(String section) {
         try {
-            // Walk scene graph up to find the BorderPane managed by DashboardController
+
             Node node = totalEmployeesLabel;
             while (node != null && !(node instanceof javafx.scene.layout.BorderPane)) {
                 node = node.getParent();

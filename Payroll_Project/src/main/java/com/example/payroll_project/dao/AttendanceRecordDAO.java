@@ -67,11 +67,9 @@ public class AttendanceRecordDAO implements BaseDAO<AttendanceRecord, Integer> {
         }
     }
     
-    /**
-     * Create or update attendance record (upsert)
-     */
+
     public AttendanceRecord createOrUpdate(AttendanceRecord record) throws SQLException {
-        // Check if record exists for this employee and date
+
         Optional<AttendanceRecord> existing = findByEmployeeAndDate(
             record.getEmployeeId(), 
             record.getAttendanceDate()
@@ -86,9 +84,7 @@ public class AttendanceRecordDAO implements BaseDAO<AttendanceRecord, Integer> {
         }
     }
     
-    /**
-     * Batch insert for CSV import
-     */
+
     public int batchCreate(List<AttendanceRecord> records) throws SQLException {
         String sql = """
             INSERT INTO attendance_records (
@@ -131,14 +127,12 @@ public class AttendanceRecordDAO implements BaseDAO<AttendanceRecord, Integer> {
                 
                 stmt.addBatch();
                 insertedCount++;
-                
-                // Execute batch every 100 records
+
                 if (insertedCount % 100 == 0) {
                     stmt.executeBatch();
                 }
             }
-            
-            // Execute remaining batch
+
             stmt.executeBatch();
             conn.commit();
             conn.setAutoCommit(true);
@@ -171,10 +165,7 @@ public class AttendanceRecordDAO implements BaseDAO<AttendanceRecord, Integer> {
         
         return Optional.empty();
     }
-    
-    /**
-     * Find attendance record by employee and date
-     */
+
     public Optional<AttendanceRecord> findByEmployeeAndDate(Integer employeeId, LocalDate date) 
             throws SQLException {
         String sql = """
@@ -197,10 +188,7 @@ public class AttendanceRecordDAO implements BaseDAO<AttendanceRecord, Integer> {
         
         return Optional.empty();
     }
-    
-    /**
-     * Find attendance records by date range
-     */
+
     public List<AttendanceRecord> findByDateRange(LocalDate startDate, LocalDate endDate) 
             throws SQLException {
         String sql = """
@@ -226,10 +214,7 @@ public class AttendanceRecordDAO implements BaseDAO<AttendanceRecord, Integer> {
         
         return records;
     }
-    
-    /**
-     * Find attendance records with anomalies
-     */
+
     public List<AttendanceRecord> findAnomalies(LocalDate startDate, LocalDate endDate) 
             throws SQLException {
         String sql = """
@@ -256,10 +241,7 @@ public class AttendanceRecordDAO implements BaseDAO<AttendanceRecord, Integer> {
         
         return records;
     }
-    
-    /**
-     * Find records by employee
-     */
+
     public List<AttendanceRecord> findByEmployee(Integer employeeId, LocalDate startDate, 
             LocalDate endDate) throws SQLException {
         String sql = """
@@ -408,9 +390,7 @@ public class AttendanceRecordDAO implements BaseDAO<AttendanceRecord, Integer> {
         return 0;
     }
     
-    /**
-     * Count records in date range
-     */
+
     public long countInRange(LocalDate startDate, LocalDate endDate) throws SQLException {
         String sql = """
             SELECT COUNT(*) FROM attendance_records
@@ -432,10 +412,7 @@ public class AttendanceRecordDAO implements BaseDAO<AttendanceRecord, Integer> {
         
         return 0;
     }
-    
-    /**
-     * Count anomalies in date range
-     */
+
     public long countAnomalies(LocalDate startDate, LocalDate endDate) throws SQLException {
         String sql = """
             SELECT COUNT(*) FROM attendance_records
@@ -458,10 +435,7 @@ public class AttendanceRecordDAO implements BaseDAO<AttendanceRecord, Integer> {
         
         return 0;
     }
-    
-    /**
-     * Set attendance parameters for PreparedStatement
-     */
+
     private void setAttendanceParameters(PreparedStatement stmt, AttendanceRecord record) 
             throws SQLException {
         stmt.setInt(1, record.getEmployeeId());
@@ -484,10 +458,7 @@ public class AttendanceRecordDAO implements BaseDAO<AttendanceRecord, Integer> {
         stmt.setObject(18, record.getImportBatchId());
         stmt.setString(19, record.getDataSource());
     }
-    
-    /**
-     * Map ResultSet to AttendanceRecord object
-     */
+
     private AttendanceRecord mapResultSetToAttendance(ResultSet rs) throws SQLException {
         AttendanceRecord record = new AttendanceRecord();
         

@@ -8,7 +8,6 @@ import org.mindrot.jbcrypt.BCrypt;
  */
 public class PasswordUtil {
     
-    // BCrypt work factor (higher = more secure but slower)
     private static final int WORK_FACTOR = 12;
 
     public static String hashPassword(String plainPassword) {

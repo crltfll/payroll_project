@@ -27,7 +27,6 @@
                 </VBox>
             </HBox>
             
-            <!-- Quick Actions in header (informational only — navigation done via sidebar) -->
             <HBox spacing="10" alignment="CENTER_RIGHT">
                 <Button text="Import Attendance" styleClass="header-button"
                         onAction="#showAttendance"/>

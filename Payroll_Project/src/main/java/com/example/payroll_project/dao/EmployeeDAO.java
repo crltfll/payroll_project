@@ -33,21 +33,8 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
         this.dbManager = DatabaseManager.getInstance();
     }
 
-    // -----------------------------------------------------------------------
-    // CREATE
-    // -----------------------------------------------------------------------
 
-    /**
-     * Creates a new employee, OR reactivates a previously soft-deleted employee
-     * whose employee_code matches.  This prevents UNIQUE constraint failures when
-     * an operator re-enters the same employee code after a soft-delete.
-     *
-     * Use this method from the UI instead of create() for new-employee flows.
-     *
-     * @return the created/reactivated Employee (with its database ID set)
-     */
     public Employee createOrReactivate(Employee employee) throws SQLException {
-        // Check whether a (possibly inactive) row already exists for this code
         String checkSql = "SELECT employee_id, is_active FROM employees WHERE employee_code = ?";
         try (Connection conn = dbManager.getConnection();
              PreparedStatement ps = conn.prepareStatement(checkSql)) {
@@ -55,7 +42,6 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) {
                     boolean wasActive = rs.getBoolean("is_active");
-                    // Row exists (active or inactive) — reuse its ID and UPDATE
                     employee.setEmployeeId(rs.getInt("employee_id"));
                     employee.setActive(true);   // always reactivate
                     update(employee);
@@ -68,7 +54,6 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
                 }
             }
         }
-        // No existing row — safe to INSERT normally
         return create(employee);
     }
 
@@ -107,9 +92,6 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
         }
     }
 
-    /**
-     * Sets parameters for the CREATE statement (20 params, no date_separated).
-     */
     private void setCreateParameters(PreparedStatement stmt, Employee employee) throws SQLException {
         stmt.setString(1,  employee.getEmployeeCode());
         stmt.setString(2,  employee.getFirstName());
@@ -134,9 +116,7 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
                 ? employee.getCreatedAt() : LocalDateTime.now()));
     }
 
-    // -----------------------------------------------------------------------
-    // READ
-    // -----------------------------------------------------------------------
+
 
     @Override
     public Optional<Employee> findById(Integer id) throws SQLException {
@@ -232,24 +212,7 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
         return employees;
     }
 
-    // -----------------------------------------------------------------------
-    // UPDATE
-    // -----------------------------------------------------------------------
 
-    /**
-     * UPDATE SQL column order:
-     *  1  employee_code      12  date_separated  (EXTRA vs CREATE — was causing the bug)
-     *  2  first_name         13  base_rate
-     *  3  middle_name        14  rate_type
-     *  4  last_name          15  sss_number
-     *  5  email              16  philhealth_number
-     *  6  phone_number       17  pagibig_number
-     *  7  address            18  tin
-     *  8  employment_type    19  is_active
-     *  9  position           20  updated_by
-     * 10  department         21  updated_at
-     * 11  date_hired         22  employee_id  (WHERE clause)
-     */
     @Override
     public boolean update(Employee employee) throws SQLException {
         String sql = """
@@ -304,9 +267,6 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // DELETE
-    // -----------------------------------------------------------------------
 
     @Override
     public boolean delete(Integer id) throws SQLException {
@@ -337,10 +297,6 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
             return false;
         }
     }
-
-    // -----------------------------------------------------------------------
-    // UTILITY
-    // -----------------------------------------------------------------------
 
     @Override
     public boolean exists(Integer id) throws SQLException {
@@ -387,9 +343,6 @@ public class EmployeeDAO implements BaseDAO<Employee, Integer> {
         return 0;
     }
 
-    // -----------------------------------------------------------------------
-    // MAPPING
-    // -----------------------------------------------------------------------
 
     private Employee mapResultSetToEmployee(ResultSet rs) throws SQLException {
         Employee employee = new Employee();

@@ -86,7 +86,6 @@ public class EmployeesController {
             return new SimpleStringProperty(d != null ? d.format(DATE_FMT) : "");
         });
 
-        // Status badge
         statusColumn.setCellValueFactory(c ->
                 new SimpleStringProperty(c.getValue().isActive() ? "Active" : "Inactive"));
         statusColumn.setCellFactory(col -> new TableCell<>() {
@@ -100,7 +99,6 @@ public class EmployeesController {
             }
         });
 
-        // Actions column with working Edit
         actionsColumn.setCellFactory(col -> new TableCell<>() {
             private final Button editBtn   = new Button("Edit");
             private final Button deleteBtn = new Button("Delete");
@@ -128,19 +126,13 @@ public class EmployeesController {
         });
     }
 
-    // -----------------------------------------------------------------------
-    // CRUD operations
-    // -----------------------------------------------------------------------
 
     @FXML
     private void handleAddEmployee() {
         openEmployeeForm(null);
     }
 
-    /**
-     * Opens the employee form dialog.
-     * @param employee null = add new, non-null = edit existing
-     */
+
     private void openEmployeeForm(Employee employee) {
         try {
             FXMLLoader loader = new FXMLLoader(
@@ -160,7 +152,6 @@ public class EmployeesController {
             stage.initModality(Modality.APPLICATION_MODAL);
             stage.showAndWait();
 
-            // Refresh table regardless (controller auto-saves on "Save")
             loadEmployees();
 
         } catch (IOException e) {
@@ -195,9 +186,6 @@ public class EmployeesController {
         });
     }
 
-    // -----------------------------------------------------------------------
-    // Loading & filtering
-    // -----------------------------------------------------------------------
 
     private void loadEmployees() {
         new Thread(() -> {
@@ -260,7 +248,6 @@ public class EmployeesController {
         pageLabel.setText("Page 1 of 1");
     }
 
-    // -----------------------------------------------------------------------
     private void showErrorAlert(String title, String msg) {
         Alert a = new Alert(Alert.AlertType.ERROR);
         a.setTitle(title); a.setHeaderText(null); a.setContentText(msg); a.showAndWait();

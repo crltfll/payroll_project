@@ -9,7 +9,6 @@
       fx:controller="com.example.payroll_project.controller.AttendanceController"
       spacing="24">
     
-    <!-- Page Header -->
     <HBox alignment="CENTER_LEFT" spacing="20">
         <VBox spacing="4">
             <Label text="Attendance Management" styleClass="card-title" style="-fx-font-size: 28px;"/>
@@ -28,7 +27,6 @@
         </HBox>
     </HBox>
 
-    <!-- Statistics Cards -->
     <GridPane hgap="20" vgap="20">
         <columnConstraints>
             <ColumnConstraints percentWidth="25"/>
@@ -78,7 +76,6 @@
         </VBox>
     </GridPane>
 
-    <!-- Date Filter Section -->
     <VBox styleClass="card" spacing="16">
         <Label text="📅 Filter by Date Range" styleClass="card-title" style="-fx-font-size: 16px;"/>
         <HBox spacing="12" alignment="CENTER_LEFT">
@@ -107,7 +104,6 @@
         </HBox>
     </VBox>
 
-    <!-- Attendance Records Table -->
     <VBox styleClass="card" spacing="16" VBox.vgrow="ALWAYS">
         <HBox styleClass="card-header" alignment="CENTER_LEFT" spacing="15">
             <VBox spacing="4">
@@ -162,7 +158,6 @@
             </placeholder>
         </TableView>
 
-        <!-- Pagination (Future Implementation) -->
         <HBox alignment="CENTER" spacing="10" style="-fx-padding: 10px 0 0 0;">
             <Button text="◀ Previous" styleClass="button-secondary" 
                    onAction="#handlePreviousPage" disable="true"/>
@@ -173,7 +168,6 @@
         </HBox>
     </VBox>
     
-    <!-- Import Instructions & Compliance Card -->
     <VBox styleClass="card" spacing="12" style="-fx-background-color: #EFF6FF; -fx-border-color: #3B82F6; -fx-border-width: 1px;">
         <HBox alignment="CENTER_LEFT" spacing="12">
             <Label text="ℹ️" style="-fx-font-size: 24px;"/>
@@ -206,7 +200,6 @@
         </HBox>
     </VBox>
     
-    <!-- Supported CSV Format Notice -->
     <VBox styleClass="card" spacing="8" style="-fx-background-color: #F3F4F6; -fx-border-color: #D1D5DB; -fx-border-width: 1px;">
         <HBox alignment="CENTER_LEFT" spacing="10">
             <Label text="📄" style="-fx-font-size: 18px;"/>

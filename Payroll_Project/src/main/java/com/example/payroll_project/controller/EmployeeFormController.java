@@ -14,16 +14,6 @@ import java.sql.SQLException;
 /**
  * Employee Form Controller for Add/Edit Employee
  * Handles employee creation and modification (F9)
- *
- * FIXES APPLIED:
- * 1. getText() NPE — replaced every raw .getText().trim() with null-safe
- *    helper getText(field) so a missing fx:id never crashes the app.
- * 2. setEmployee() NPE — all setText() calls now guard against null getters.
- * 3. baseRateField.setText() — uses BigDecimal safely; defaults to empty
- *    string so the user is prompted to enter a valid rate.
- * 4. createOrReactivate() — when adding a new employee whose code was
- *    previously soft-deleted, the old row is reactivated instead of
- *    attempting a duplicate INSERT (which threw a UNIQUE constraint error).
  */
 public class EmployeeFormController {
 
@@ -55,9 +45,6 @@ public class EmployeeFormController {
     private Employee employee;
     private boolean saveClicked = false;
 
-    // -----------------------------------------------------------------------
-    // Null-safe helpers
-    // -----------------------------------------------------------------------
 
     private String getText(TextField field) {
         if (field == null) return "";
@@ -79,9 +66,6 @@ public class EmployeeFormController {
         if (area != null) area.setText(value != null ? value : "");
     }
 
-    // -----------------------------------------------------------------------
-    // Initialization
-    // -----------------------------------------------------------------------
 
     @FXML
     public void initialize() {
@@ -97,9 +81,7 @@ public class EmployeeFormController {
         errorLabel.setVisible(false);
     }
 
-    // -----------------------------------------------------------------------
-    // Set employee for editing
-    // -----------------------------------------------------------------------
+
 
     public void setEmployee(Employee employee) {
         this.employee = employee;
@@ -139,9 +121,6 @@ public class EmployeeFormController {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Save
-    // -----------------------------------------------------------------------
 
     @FXML
     private void handleSave() {
@@ -172,9 +151,7 @@ public class EmployeeFormController {
                 employee.setActive(activeCheckbox.isSelected());
 
                 if (isNew) {
-                    // FIX: use createOrReactivate so that re-entering a previously
-                    // deactivated employee code reactivates the old row instead of
-                    // failing with a UNIQUE constraint violation.
+
                     employeeDAO.createOrReactivate(employee);
                     logger.info("Created/reactivated employee: {}", employee.getEmployeeCode());
                 } else {
@@ -194,18 +171,11 @@ public class EmployeeFormController {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Cancel
-    // -----------------------------------------------------------------------
 
     @FXML
     private void handleCancel() {
         closeDialog();
     }
-
-    // -----------------------------------------------------------------------
-    // Validation
-    // -----------------------------------------------------------------------
 
     private boolean validateInput() {
         StringBuilder errors = new StringBuilder();
@@ -255,10 +225,6 @@ public class EmployeeFormController {
 
         return true;
     }
-
-    // -----------------------------------------------------------------------
-    // Utilities
-    // -----------------------------------------------------------------------
 
     private void showError(String message) {
         errorLabel.setText(message);

@@ -27,12 +27,9 @@ public class DatabaseManager {
     private Connection connection;
 
     private DatabaseManager() {
-        // Private constructor for singleton
     }
 
-    /**
-     * Get singleton instance
-     */
+
     public static synchronized DatabaseManager getInstance() {
         if (instance == null) {
             instance = new DatabaseManager();
@@ -40,32 +37,22 @@ public class DatabaseManager {
         return instance;
     }
 
-    /**
-     * Initialize database
-     */
+
     public void initialize() throws SQLException {
         try {
-            // Create data directory if it doesn't exist
             File dataDir = new File(DB_DIRECTORY);
             if (!dataDir.exists()) {
                 dataDir.mkdirs();
                 logger.info("Created data directory: {}", DB_DIRECTORY);
             }
 
-            // Load SQLite JDBC driver
             Class.forName("org.sqlite.JDBC");
-
-            // Connect to database
             connection = DriverManager.getConnection(DB_URL);
-
-            // Enable foreign keys
             try (Statement stmt = connection.createStatement()) {
                 stmt.execute("PRAGMA foreign_keys = ON");
             }
 
             logger.info("Database initialized successfully: {}", DB_URL);
-
-            // Initialize schema
             initializeSchema();
 
         } catch (ClassNotFoundException e) {
@@ -74,9 +61,7 @@ public class DatabaseManager {
         }
     }
 
-    /**
-     * Initialize database schema with improved path resolution
-     */
+
     private void initializeSchema() throws SQLException {
         logger.info("Initializing database schema...");
 
@@ -92,16 +77,11 @@ public class DatabaseManager {
             }
         }
 
-        // Fallback to creating basic schema
         logger.warn("Using fallback schema creation");
         createBasicSchema();
     }
 
-    /**
-     * Try to load schema from multiple possible locations
-     */
     private String loadSchemaFromMultipleSources() {
-        // Try multiple paths in order
         String[] possiblePaths = {
             "docs/database_schema.sql",
             "../docs/database_schema.sql",
@@ -109,7 +89,6 @@ public class DatabaseManager {
             "src/main/resources/database_schema.sql"
         };
 
-        // First try file system
         for (String path : possiblePaths) {
             try {
                 if (Files.exists(Paths.get(path))) {
@@ -122,7 +101,6 @@ public class DatabaseManager {
             }
         }
 
-        // Try classpath
         try (InputStream is = getClass().getClassLoader().getResourceAsStream("database_schema.sql")) {
             if (is != null) {
                 String content = new String(is.readAllBytes(), StandardCharsets.UTF_8);
@@ -136,9 +114,6 @@ public class DatabaseManager {
         return null;
     }
 
-    /**
-     * Execute SQL script from string
-     */
     private void executeSchemaScript(String script) throws SQLException {
         String[] statements = script.split(";");
 
@@ -156,9 +131,6 @@ public class DatabaseManager {
         }
     }
 
-    /**
-     * Create basic schema manually (fallback)
-     */
     private void createBasicSchema() throws SQLException {
         try (Statement stmt = connection.createStatement()) {
 
@@ -250,19 +222,12 @@ public class DatabaseManager {
         }
     }
 
-    /**
-     * Get database connection
-     */
     public Connection getConnection() throws SQLException {
         if (connection == null || connection.isClosed()) {
             initialize();
         }
         return connection;
     }
-
-    /**
-     * Close database connection
-     */
     public void close() {
         if (connection != null) {
             try {
@@ -274,24 +239,13 @@ public class DatabaseManager {
         }
     }
 
-    /**
-     * Begin transaction
-     */
     public void beginTransaction() throws SQLException {
         getConnection().setAutoCommit(false);
     }
-
-    /**
-     * Commit transaction
-     */
     public void commit() throws SQLException {
         getConnection().commit();
         getConnection().setAutoCommit(true);
     }
-
-    /**
-     * Rollback transaction
-     */
     public void rollback() {
         try {
             if (connection != null && !connection.isClosed()) {
@@ -303,9 +257,6 @@ public class DatabaseManager {
         }
     }
 
-    /**
-     * Check if database is initialized
-     */
     public boolean isDatabaseInitialized() {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement();

@@ -10,7 +10,6 @@
       fx:controller="com.example.payroll_project.controller.DashboardHomeController"
       spacing="24">
     
-    <!-- Page Header -->
     <HBox alignment="CENTER_LEFT" spacing="20">
         <VBox spacing="4">
             <Label text="Dashboard" styleClass="card-title" style="-fx-font-size: 28px;"/>
@@ -21,7 +20,6 @@
         <Region HBox.hgrow="ALWAYS"/>
     </HBox>
     
-    <!-- Stats Cards Row -->
     <GridPane hgap="20" vgap="20">
         <columnConstraints>
             <ColumnConstraints percentWidth="25"/>
@@ -30,7 +28,6 @@
             <ColumnConstraints percentWidth="25"/>
         </columnConstraints>
         
-        <!-- Total Employees -->
         <VBox styleClass="stat-card" spacing="12" GridPane.columnIndex="0">
             <HBox alignment="CENTER_LEFT" spacing="10">
                 <Label text="👥" style="-fx-font-size: 24px;"/>
@@ -41,7 +38,6 @@
                    styleClass="stat-change-positive"/>
         </VBox>
         
-        <!-- Active Attendance -->
         <VBox styleClass="stat-card" spacing="12" GridPane.columnIndex="1">
             <HBox alignment="CENTER_LEFT" spacing="10">
                 <Label text="📋" style="-fx-font-size: 24px;"/>
@@ -52,7 +48,6 @@
                    styleClass="stat-change-positive"/>
         </VBox>
         
-        <!-- Pending Payroll -->
         <VBox styleClass="stat-card" spacing="12" GridPane.columnIndex="2">
             <HBox alignment="CENTER_LEFT" spacing="10">
                 <Label text="💰" style="-fx-font-size: 24px;"/>
@@ -63,7 +58,6 @@
                    styleClass="stat-change-positive"/>
         </VBox>
         
-        <!-- Processing Status -->
         <VBox styleClass="stat-card" spacing="12" GridPane.columnIndex="3">
             <HBox alignment="CENTER_LEFT" spacing="10">
                 <Label text="⚡" style="-fx-font-size: 24px;"/>
@@ -75,7 +69,6 @@
         </VBox>
     </GridPane>
     
-    <!-- Content Grid -->
     <GridPane hgap="20" vgap="20">
         <columnConstraints>
             <ColumnConstraints percentWidth="60"/>
@@ -86,7 +79,6 @@
             <RowConstraints/>
         </rowConstraints>
         
-        <!-- Recent Attendance Card -->
         <VBox styleClass="card" spacing="16" GridPane.columnIndex="0" GridPane.rowIndex="0">
             <VBox styleClass="card-header" spacing="8">
                 <Label text="Recent Attendance Records" styleClass="card-title"/>
@@ -109,7 +101,6 @@
             </TableView>
         </VBox>
         
-        <!-- Quick Actions Card — buttons wired via DashboardHomeController -->
         <VBox styleClass="card" spacing="16" GridPane.columnIndex="1" GridPane.rowIndex="0">
             <VBox styleClass="card-header" spacing="8">
                 <Label text="Quick Actions" styleClass="card-title"/>
@@ -135,7 +126,6 @@
             </VBox>
         </VBox>
         
-        <!-- Upcoming Pay Periods -->
         <VBox styleClass="card" spacing="16" GridPane.columnIndex="0" GridPane.rowIndex="1">
             <VBox styleClass="card-header" spacing="8">
                 <Label text="Upcoming Pay Periods" styleClass="card-title"/>
@@ -164,8 +154,7 @@
                 </HBox>
             </VBox>
         </VBox>
-        
-        <!-- System Info -->
+
         <VBox styleClass="card" spacing="16" GridPane.columnIndex="1" GridPane.rowIndex="1">
             <VBox styleClass="card-header" spacing="8">
                 <Label text="System Information" styleClass="card-title"/>

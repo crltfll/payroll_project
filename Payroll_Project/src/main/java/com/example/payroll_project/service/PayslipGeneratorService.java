@@ -27,17 +27,7 @@ public class PayslipGeneratorService {
     private static final Logger logger = LoggerFactory.getLogger(PayslipGeneratorService.class);
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM dd, yyyy");
 
-    // -----------------------------------------------------------------------
 
-    /**
-     * Generate a single employee payslip CSV.
-     *
-     * @param employee      employee data
-     * @param payPeriod     the pay period
-     * @param payroll       computed payroll record
-     * @param outputDir     folder to write to (created if absent)
-     * @return path of the generated file
-     */
     public String generatePayslip(Employee employee, PayPeriod payPeriod,
                                    PayrollRecord payroll, String outputDir) throws IOException {
 
@@ -50,7 +40,6 @@ public class PayslipGeneratorService {
         try (PrintWriter pw = new PrintWriter(
                 new OutputStreamWriter(new FileOutputStream(out.toFile()), StandardCharsets.UTF_8))) {
 
-            // Header block
             pw.println("KC-02N PAYROLL SYSTEM - PAYSLIP");
             pw.println(",,");
             row(pw, "Employee Code",  employee.getEmployeeCode());
@@ -65,7 +54,6 @@ public class PayslipGeneratorService {
                                          ? fmt(payPeriod.getPayDate()) : "TBD");
             pw.println(",,");
 
-            // Attendance summary
             pw.println("--- ATTENDANCE SUMMARY ---,,");
             row(pw, "Days Worked",    payroll.getDaysWorked());
             row(pw, "Days Absent",    payroll.getDaysAbsent());
@@ -77,7 +65,6 @@ public class PayslipGeneratorService {
             row(pw, "Undertime (min)",payroll.getTotalUndertimeMinutes());
             pw.println(",,");
 
-            // Earnings
             pw.println("--- EARNINGS ---,,");
             row(pw, "Basic Pay",       money(payroll.getBasicPay()));
             row(pw, "Overtime Pay",    money(payroll.getOvertimePay()));
@@ -89,7 +76,6 @@ public class PayslipGeneratorService {
             row(pw, "GROSS PAY",      money(payroll.getGrossPay()));
             pw.println(",,");
 
-            // Deductions
             pw.println("--- DEDUCTIONS ---,,");
             row(pw, "SSS Contribution",      money(payroll.getSssContribution()));
             row(pw, "PhilHealth Contribution",money(payroll.getPhilhealthContribution()));
@@ -101,12 +87,10 @@ public class PayslipGeneratorService {
             row(pw, "TOTAL DEDUCTIONS",      money(payroll.getTotalDeductions()));
             pw.println(",,");
 
-            // Net pay
             pw.println("--- NET PAY ---,,");
             row(pw, "NET PAY", money(payroll.getNetPay()));
             pw.println(",,");
 
-            // Government IDs
             pw.println("--- GOVERNMENT IDs ---,,");
             row(pw, "SSS Number",      nvl(employee.getSssNumber()));
             row(pw, "PhilHealth No.",  nvl(employee.getPhilhealthNumber()));
@@ -120,11 +104,7 @@ public class PayslipGeneratorService {
         return out.toString();
     }
 
-    /**
-     * Generate payslips for all employees and a consolidated summary CSV.
-     *
-     * @return list of generated file paths
-     */
+
     public List<String> generateBatch(List<Employee> employees,
                                        PayPeriod payPeriod,
                                        List<PayrollRecord> payrolls,
@@ -132,7 +112,6 @@ public class PayslipGeneratorService {
 
         List<String> generated = new java.util.ArrayList<>();
 
-        // Individual payslips
         for (int i = 0; i < employees.size(); i++) {
             Employee e = employees.get(i);
             PayrollRecord pr = payrolls.stream()
@@ -143,13 +122,10 @@ public class PayslipGeneratorService {
             }
         }
 
-        // Consolidated summary
         generated.add(generateSummary(employees, payPeriod, payrolls, outputDir));
 
         return generated;
     }
-
-    // -----------------------------------------------------------------------
 
     private String generateSummary(List<Employee> employees,
                                     PayPeriod payPeriod,
@@ -204,9 +180,6 @@ public class PayslipGeneratorService {
         return out.toString();
     }
 
-    // -----------------------------------------------------------------------
-    // Utilities
-    // -----------------------------------------------------------------------
 
     private void row(PrintWriter pw, String label, Object value) {
         pw.printf("%s,%s,%n", csv(label), csv(String.valueOf(value)));

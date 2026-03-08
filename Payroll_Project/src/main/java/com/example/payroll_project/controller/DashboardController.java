@@ -17,8 +17,6 @@ import java.io.IOException;
  * Main Dashboard Controller
  * Handles navigation and content area management.
  *
- * FIXED: loadView() now wraps every child view in a ScrollPane so that
- *        content is always reachable even on smaller / lower-resolution screens.
  */
 public class DashboardController {
 
@@ -54,9 +52,7 @@ public class DashboardController {
         showDashboardHome();
     }
 
-    // -----------------------------------------------------------------------
-    // Navigation
-    // -----------------------------------------------------------------------
+
 
     @FXML private void showDashboardHome() { loadView("/fxml/dashboard-home.fxml", dashboardButton); }
     @FXML private void showEmployees()     { loadView("/fxml/employees.fxml",       employeesButton); }
@@ -65,15 +61,12 @@ public class DashboardController {
     @FXML private void showReports()       { loadView("/fxml/reports.fxml",         reportsButton); }
     @FXML private void showSettings()      { loadView("/fxml/settings.fxml",        settingsButton); }
 
-    // Public aliases for DashboardHomeController quick-actions
+
     public void showEmployeesPublic()  { showEmployees();  }
     public void showAttendancePublic() { showAttendance(); }
     public void showPayrollPublic()    { showPayroll();    }
     public void showReportsPublic()    { showReports();    }
 
-    // -----------------------------------------------------------------------
-    // Logout
-    // -----------------------------------------------------------------------
 
     @FXML
     private void handleLogout() {
@@ -88,26 +81,17 @@ public class DashboardController {
         });
     }
 
-    // -----------------------------------------------------------------------
-    // Core view loader
-    // -----------------------------------------------------------------------
 
     private void loadView(String fxmlPath, Button button) {
         try {
             FXMLLoader loader = new FXMLLoader(getClass().getResource(fxmlPath));
             Parent view = loader.load();
 
-            // Re-register self so child views can still navigate upward
+
             if (rootBorderPane != null) {
                 rootBorderPane.setUserData(this);
             }
 
-            /*
-             * RESIZABILITY FIX
-             * ─────────────────
-             * If the loaded view is NOT already a ScrollPane (attendance.fxml wraps
-             * itself), we wrap it here so every panel scrolls on small screens.
-             */
             javafx.scene.Node nodeToPlace;
             if (view instanceof javafx.scene.control.ScrollPane) {
                 // Already a ScrollPane – use as-is
@@ -130,7 +114,6 @@ public class DashboardController {
 
             contentArea.getChildren().setAll(nodeToPlace);
 
-            // Update active nav-button highlight
             if (currentActiveButton != null) {
                 currentActiveButton.getStyleClass().remove("nav-button-active");
             }

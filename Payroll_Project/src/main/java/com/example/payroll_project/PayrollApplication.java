@@ -14,7 +14,6 @@ import java.io.IOException;
 /**
  * Main JavaFX Application
  * KC-02N Biometric Scanner-based Automated Payroll System
- *
  */
 public class PayrollApplication extends Application {
     

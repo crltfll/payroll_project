@@ -23,9 +23,7 @@ public class UserService {
         this.dbManager = DatabaseManager.getInstance();
     }
     
-    /**
-     * Authenticate user
-     */
+
     public Optional<User> authenticate(String username, String password) throws SQLException {
         String sql = "SELECT * FROM users WHERE username = ? AND is_active = 1";
         
@@ -38,11 +36,9 @@ public class UserService {
                 if (rs.next()) {
                     String passwordHash = rs.getString("password_hash");
                     
-                    // Verify password
                     if (PasswordUtil.verifyPassword(password, passwordHash)) {
                         User user = mapResultSetToUser(rs);
                         
-                        // Update last login
                         updateLastLogin(user.getUserId());
                         
                         return Optional.of(user);
@@ -54,9 +50,7 @@ public class UserService {
         return Optional.empty();
     }
     
-    /**
-     * Update last login timestamp
-     */
+
     private void updateLastLogin(Integer userId) {
         String sql = "UPDATE users SET last_login = ? WHERE user_id = ?";
         
@@ -72,9 +66,6 @@ public class UserService {
         }
     }
     
-    /**
-     * Map ResultSet to User object
-     */
     private User mapResultSetToUser(ResultSet rs) throws SQLException {
         User user = new User();
         

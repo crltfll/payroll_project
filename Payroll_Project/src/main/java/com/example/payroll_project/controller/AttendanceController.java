@@ -23,11 +23,6 @@ import java.util.*;
 /**
  * Attendance Controller (CR1: FA2000 Biometric Attendance Integration)
  *
- * FIX 1: Default date range is now 3 years back → today so all historical
- *         records (including old CSV imports) are visible on first load.
- *
- * FIX 2: Employee-code matching tries multiple formats so that a device
- *         ID of "7" will match database codes "EMP007", "007", "07", or "7".
  */
 public class AttendanceController {
 
@@ -64,25 +59,24 @@ public class AttendanceController {
     private final ObservableList<AttendanceRecord> allRecords      = FXCollections.observableArrayList();
     private final ObservableList<AttendanceRecord> filteredRecords = FXCollections.observableArrayList();
 
-    /** Cache of employeeId → Employee so code lookup doesn't hit the DB per cell. */
+
     private java.util.Map<Integer, Employee> empCache = new java.util.HashMap<>();
 
     @FXML
     public void initialize() {
         setupTableColumns();
 
-        // FIX: Default to a wide range (3 years back → today) so all historical
-        // CSV imports are immediately visible without manual filter adjustment.
+
         LocalDate now = LocalDate.now();
         startDatePicker.setValue(now.minusYears(3));
         endDatePicker.setValue(now);
 
         attendanceTable.setItems(filteredRecords);
-        loadEmployeeCache();   // populate cache first; table refresh happens after
+        loadEmployeeCache();
         loadFromDatabase();
     }
 
-    /** Loads all employees into a local cache keyed by employeeId. */
+
     private void loadEmployeeCache() {
         new Thread(() -> {
             try {
@@ -99,9 +93,6 @@ public class AttendanceController {
         }).start();
     }
 
-    // -----------------------------------------------------------------------
-    // Import
-    // -----------------------------------------------------------------------
 
     @FXML
     private void handleImportCSV() {
@@ -166,8 +157,7 @@ public class AttendanceController {
                 javafx.application.Platform.runLater(() -> {
                     loading.close();
 
-                    // After import, widen the date range to cover newly imported data
-                    // so records are visible immediately without manual adjustment.
+
                     byEmpF.values().stream()
                             .flatMap(Collection::stream)
                             .map(AttendanceRecord::getAttendanceDate)
@@ -227,9 +217,6 @@ public class AttendanceController {
         }).start();
     }
 
-    // -----------------------------------------------------------------------
-    // Employee code resolution
-    // -----------------------------------------------------------------------
 
     private Optional<Employee> resolveEmployee(String parsedCode) throws java.sql.SQLException {
         for (String candidate : buildCodeCandidates(parsedCode)) {
@@ -261,14 +248,9 @@ public class AttendanceController {
         return new ArrayList<>(new LinkedHashSet<>(candidates));
     }
 
-    // -----------------------------------------------------------------------
-    // Load from DB on initialize / filter change
-    // -----------------------------------------------------------------------
-
     private void loadFromDatabase() {
         new Thread(() -> {
             try {
-                // If both dates are set use them; otherwise load everything.
                 LocalDate s = startDatePicker.getValue();
                 LocalDate e = endDatePicker.getValue();
                 List<AttendanceRecord> records = attDAO.findByDateRange(s, e);
@@ -283,14 +265,10 @@ public class AttendanceController {
         }).start();
     }
 
-    // -----------------------------------------------------------------------
-    // Table columns
-    // -----------------------------------------------------------------------
+
 
     private void setupTableColumns() {
-        // FIX: Use the actual employee_code from the DB (via cache) instead of
-        // fabricating "EMP-{dbId}" which was showing the wrong value (e.g. EMP-2
-        // for an employee whose actual code is 7).
+
         employeeCodeColumn.setCellValueFactory(c -> {
             Integer id = c.getValue().getEmployeeId();
             Employee emp = id != null ? empCache.get(id) : null;
@@ -298,7 +276,6 @@ public class AttendanceController {
             return new SimpleStringProperty(code);
         });
 
-        // Also switch name lookup to use the cache (avoids one DB query per cell).
         employeeNameColumn.setCellValueFactory(c -> {
             Integer id = c.getValue().getEmployeeId();
             Employee emp = id != null ? empCache.get(id) : null;
@@ -399,9 +376,6 @@ public class AttendanceController {
         });
     }
 
-    // -----------------------------------------------------------------------
-    // Filters & stats
-    // -----------------------------------------------------------------------
 
     @FXML private void handleApplyDateFilter() { loadFromDatabase(); }
     @FXML private void handleFilterToday()     { LocalDate t = LocalDate.now(); startDatePicker.setValue(t); endDatePicker.setValue(t); loadFromDatabase(); }

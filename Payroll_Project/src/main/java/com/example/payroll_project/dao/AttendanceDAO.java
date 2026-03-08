@@ -152,13 +152,7 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
         }
     }
 
-    // -----------------------------------------------------------------------
-    // Extra queries
-    // -----------------------------------------------------------------------
 
-    /**
-     * Find all records for a given employee in a date range.
-     */
     public List<AttendanceRecord> findByEmployeeAndPeriod(int employeeId,
                                                             LocalDate from,
                                                             LocalDate to) throws SQLException {
@@ -180,9 +174,6 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
         return list;
     }
 
-    /**
-     * Find records within a date range (all employees).
-     */
     public List<AttendanceRecord> findByDateRange(LocalDate from, LocalDate to) throws SQLException {
         String sql = (from != null && to != null)
             ? "SELECT * FROM attendance_records WHERE attendance_date BETWEEN ? AND ? ORDER BY attendance_date, employee_id"
@@ -206,9 +197,6 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
         return list;
     }
 
-    /**
-     * Find records with anomalies.
-     */
     public List<AttendanceRecord> findAnomalies() throws SQLException {
         String sql = "SELECT * FROM attendance_records WHERE has_anomaly=1 ORDER BY attendance_date";
         List<AttendanceRecord> list = new ArrayList<>();
@@ -220,9 +208,6 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
         return list;
     }
 
-    /**
-     * Upsert: insert or update on conflict (employee_id, attendance_date).
-     */
     public AttendanceRecord upsert(AttendanceRecord r) throws SQLException {
         String check = "SELECT attendance_id FROM attendance_records WHERE employee_id=? AND attendance_date=?";
         try (Connection c = db.getConnection();
@@ -240,9 +225,6 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
         return create(r);
     }
 
-    // -----------------------------------------------------------------------
-    // Mapping helpers
-    // -----------------------------------------------------------------------
 
     private AttendanceRecord map(ResultSet rs) throws SQLException {
         AttendanceRecord r = new AttendanceRecord();
