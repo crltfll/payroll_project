@@ -14,6 +14,9 @@ import java.util.Optional;
 
 /**
  * Payroll Record DAO (CR4, F12)
+ *
+ * FIX: map() was reading "night_diff_hours" — the actual column is "total_night_diff_hours".
+ * That silent SQLException caused the payroll table to appear empty on every load.
  */
 public class PayrollDAO implements BaseDAO<PayrollRecord, Integer> {
 
@@ -182,31 +185,41 @@ public class PayrollDAO implements BaseDAO<PayrollRecord, Integer> {
         }
     }
 
+    // -----------------------------------------------------------------------
+    // Mapping
+    // -----------------------------------------------------------------------
 
     private PayrollRecord map(ResultSet rs) throws SQLException {
         PayrollRecord r = new PayrollRecord();
         r.setPayrollId  (rs.getInt("payroll_id"));
         r.setPayPeriodId(rs.getInt("pay_period_id"));
         r.setEmployeeId (rs.getInt("employee_id"));
-        r.setTotalRegularHours   (rs.getBigDecimal("total_regular_hours"));
-        r.setTotalOvertimeHours  (rs.getBigDecimal("total_overtime_hours"));
-        r.setTotalNightDiffHours (rs.getBigDecimal("night_diff_hours") != null
-                ? rs.getBigDecimal("night_diff_hours")
-                : BigDecimal.ZERO);
+        r.setTotalRegularHours  (getBD(rs, "total_regular_hours"));
+        r.setTotalOvertimeHours (getBD(rs, "total_overtime_hours"));
+        // BUG FIX: was "night_diff_hours" — correct column is "total_night_diff_hours"
+        r.setTotalNightDiffHours(getBD(rs, "total_night_diff_hours"));
         r.setDaysWorked (rs.getInt("days_worked"));
         r.setDaysAbsent (rs.getInt("days_absent"));
-        r.setBasicPay           (rs.getBigDecimal("basic_pay"));
-        r.setOvertimePay        (rs.getBigDecimal("overtime_pay"));
-        r.setNightDiffPay       (rs.getBigDecimal("night_diff_pay"));
-        r.setGrossPay           (rs.getBigDecimal("gross_pay"));
-        r.setSssContribution    (rs.getBigDecimal("sss_contribution"));
-        r.setPhilhealthContribution(rs.getBigDecimal("philhealth_contribution"));
-        r.setPagibigContribution(rs.getBigDecimal("pagibig_contribution"));
-        r.setWithholdingTax     (rs.getBigDecimal("withholding_tax"));
-        r.setTotalDeductions    (rs.getBigDecimal("total_deductions"));
-        r.setNetPay             (rs.getBigDecimal("net_pay"));
+        r.setBasicPay           (getBD(rs, "basic_pay"));
+        r.setOvertimePay        (getBD(rs, "overtime_pay"));
+        r.setNightDiffPay       (getBD(rs, "night_diff_pay"));
+        r.setGrossPay           (getBD(rs, "gross_pay"));
+        r.setSssContribution    (getBD(rs, "sss_contribution"));
+        r.setPhilhealthContribution(getBD(rs, "philhealth_contribution"));
+        r.setPagibigContribution(getBD(rs, "pagibig_contribution"));
+        r.setWithholdingTax     (getBD(rs, "withholding_tax"));
+        r.setTotalDeductions    (getBD(rs, "total_deductions"));
+        r.setNetPay             (getBD(rs, "net_pay"));
         r.setFinalized          (rs.getBoolean("is_finalized"));
+        Timestamp ca = rs.getTimestamp("created_at");
+        if (ca != null) r.setCreatedAt(ca.toLocalDateTime());
         return r;
+    }
+
+    /** Null-safe BigDecimal reader; returns ZERO when the column is SQL NULL. */
+    private BigDecimal getBD(ResultSet rs, String col) throws SQLException {
+        BigDecimal v = rs.getBigDecimal(col);
+        return v != null ? v : BigDecimal.ZERO;
     }
 
     private void setBD(PreparedStatement ps, int idx, BigDecimal bd) throws SQLException {
