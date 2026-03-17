@@ -9,9 +9,13 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.HBox;
 import javafx.stage.FileChooser;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -22,7 +26,7 @@ import java.util.*;
 
 /**
  * Attendance Controller (CR1: FA2000 Biometric Attendance Integration)
- *
+ * Includes anomaly list tab and manual override (F10).
  */
 public class AttendanceController {
 
@@ -30,15 +34,20 @@ public class AttendanceController {
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.ofPattern("MMM dd, yyyy");
     private static final DateTimeFormatter TIME_FMT = DateTimeFormatter.ofPattern("HH:mm");
 
+    // ── Summary labels ─────────────────────────────────────────────────────
     @FXML private Label lastImportLabel;
     @FXML private Label lastImportDateLabel;
     @FXML private Label validRecordsLabel;
     @FXML private Label anomaliesLabel;
     @FXML private Label attendanceRateLabel;
+
+    // ── Filter controls ────────────────────────────────────────────────────
     @FXML private DatePicker startDatePicker;
     @FXML private DatePicker endDatePicker;
-    @FXML private CheckBox showAnomaliesOnly;
-    @FXML private Label recordCountLabel;
+    @FXML private CheckBox   showAnomaliesOnly;
+
+    // ── All-records tab ────────────────────────────────────────────────────
+    @FXML private Label      recordCountLabel;
     @FXML private TableView<AttendanceRecord> attendanceTable;
     @FXML private TableColumn<AttendanceRecord, String> employeeCodeColumn;
     @FXML private TableColumn<AttendanceRecord, String> employeeNameColumn;
@@ -53,29 +62,43 @@ public class AttendanceController {
     @FXML private TableColumn<AttendanceRecord, Void>   actionsColumn;
     @FXML private Label pageLabel;
 
-    private final AttendanceDAO attDAO  = new AttendanceDAO();
-    private final EmployeeDAO   empDAO  = new EmployeeDAO();
+    // ── Anomaly tab ────────────────────────────────────────────────────────
+    @FXML private Label anomalyCountLabel;
+    @FXML private TableView<AttendanceRecord> anomalyTable;
+    @FXML private TableColumn<AttendanceRecord, String> anEmpCodeCol;
+    @FXML private TableColumn<AttendanceRecord, String> anEmpNameCol;
+    @FXML private TableColumn<AttendanceRecord, String> anDateCol;
+    @FXML private TableColumn<AttendanceRecord, String> anTimeInCol;
+    @FXML private TableColumn<AttendanceRecord, String> anTimeOutCol;
+    @FXML private TableColumn<AttendanceRecord, String> anDescCol;
+    @FXML private TableColumn<AttendanceRecord, Void>   anActionsCol;
+
+    private final AttendanceDAO attDAO = new AttendanceDAO();
+    private final EmployeeDAO   empDAO = new EmployeeDAO();
 
     private final ObservableList<AttendanceRecord> allRecords      = FXCollections.observableArrayList();
     private final ObservableList<AttendanceRecord> filteredRecords = FXCollections.observableArrayList();
-
+    private final ObservableList<AttendanceRecord> anomalyRecords  = FXCollections.observableArrayList();
 
     private java.util.Map<Integer, Employee> empCache = new java.util.HashMap<>();
+
+    // ── Init ───────────────────────────────────────────────────────────────
 
     @FXML
     public void initialize() {
         setupTableColumns();
-
+        setupAnomalyColumns();
 
         LocalDate now = LocalDate.now();
         startDatePicker.setValue(now.minusYears(3));
         endDatePicker.setValue(now);
 
         attendanceTable.setItems(filteredRecords);
+        anomalyTable.setItems(anomalyRecords);
+
         loadEmployeeCache();
         loadFromDatabase();
     }
-
 
     private void loadEmployeeCache() {
         new Thread(() -> {
@@ -86,13 +109,13 @@ public class AttendanceController {
                 javafx.application.Platform.runLater(() -> {
                     empCache = map;
                     attendanceTable.refresh();
+                    anomalyTable.refresh();
                 });
-            } catch (Exception ex) {
-                logger.error("Employee cache load failed", ex);
-            }
+            } catch (Exception ex) { logger.error("Employee cache load failed", ex); }
         }).start();
     }
 
+    // ── Import ─────────────────────────────────────────────────────────────
 
     @FXML
     private void handleImportCSV() {
@@ -121,31 +144,23 @@ public class AttendanceController {
                 for (Map.Entry<String, List<AttendanceRecord>> entry : byEmployee.entrySet()) {
                     String parsedCode = entry.getKey();
                     List<AttendanceRecord> records = entry.getValue();
-
                     Optional<Employee> empOpt = resolveEmployee(parsedCode);
                     Integer empId = empOpt.map(Employee::getEmployeeId).orElse(null);
 
                     if (empId == null) {
                         String tried = String.join(", ", buildCodeCandidates(parsedCode));
-                        unmatchedDetails.add(
-                                "  • CSV device ID → " + parsedCode
+                        unmatchedDetails.add("  • CSV device ID → " + parsedCode
                                 + "\n    Tried codes: " + tried
                                 + "\n    → Register the employee with one of these codes, then re-import.");
-                        logger.warn("No employee matched for parsed code '{}'. Tried: {}", parsedCode, tried);
                     }
 
                     for (AttendanceRecord rec : records) {
                         total++;
                         if (rec.isHasAnomaly()) anomalyCount++;
-
                         if (empId != null) {
                             rec.setEmployeeId(empId);
-                            try {
-                                attDAO.upsert(rec);
-                                saved++;
-                            } catch (Exception ex) {
-                                logger.warn("Upsert failed for {}: {}", parsedCode, ex.getMessage());
-                            }
+                            try { attDAO.upsert(rec); saved++; }
+                            catch (Exception ex) { logger.warn("Upsert failed for {}: {}", parsedCode, ex.getMessage()); }
                         }
                     }
                 }
@@ -156,12 +171,10 @@ public class AttendanceController {
 
                 javafx.application.Platform.runLater(() -> {
                     loading.close();
-
-
                     byEmpF.values().stream()
                             .flatMap(Collection::stream)
                             .map(AttendanceRecord::getAttendanceDate)
-                            .filter(d -> d != null)
+                            .filter(Objects::nonNull)
                             .min(LocalDate::compareTo)
                             .ifPresent(earliest -> {
                                 if (startDatePicker.getValue() == null ||
@@ -177,25 +190,17 @@ public class AttendanceController {
 
                     StringBuilder msg = new StringBuilder();
                     msg.append(String.format(
-                            "Employees found : %d\n"
-                          + "Total records   : %d\n"
-                          + "Saved to DB     : %d\n"
-                          + "Anomalies (F3)  : %d\n",
+                            "Employees found : %d\nTotal records   : %d\nSaved to DB     : %d\nAnomalies (F3)  : %d\n",
                             byEmpF.size(), totalF, savedF, anomF));
-
                     if (!unmatchedF.isEmpty()) {
                         msg.append("\n⚠️  UNMATCHED EMPLOYEES (records NOT saved):\n");
                         unmatchedF.forEach(msg::append);
-                        msg.append("\n\nQuick fix: open the employee record and set the\n"
-                                 + "Employee Code field to the value shown above, then re-import.");
+                        msg.append("\n\nQuick fix: open the employee record and set the\nEmployee Code field to the value shown above, then re-import.");
                     } else {
                         msg.append("\n✅ All employees matched successfully.");
                     }
 
-                    Alert result = new Alert(
-                            unmatchedF.isEmpty()
-                                ? Alert.AlertType.INFORMATION
-                                : Alert.AlertType.WARNING);
+                    Alert result = new Alert(unmatchedF.isEmpty() ? Alert.AlertType.INFORMATION : Alert.AlertType.WARNING);
                     result.setTitle("Import Complete");
                     result.setHeaderText("FA2000 CSV Import " + (unmatchedF.isEmpty() ? "Successful" : "— Action Required"));
                     result.setContentText(msg.toString());
@@ -207,24 +212,16 @@ public class AttendanceController {
                 logger.error("Import failed", e);
                 javafx.application.Platform.runLater(() -> {
                     loading.close();
-                    Alert err = new Alert(Alert.AlertType.ERROR);
-                    err.setTitle("Import Failed");
-                    err.setHeaderText("Error processing CSV");
-                    err.setContentText(e.getMessage());
-                    err.showAndWait();
+                    new Alert(Alert.AlertType.ERROR, "Error processing CSV: " + e.getMessage()).showAndWait();
                 });
             }
         }).start();
     }
 
-
     private Optional<Employee> resolveEmployee(String parsedCode) throws java.sql.SQLException {
         for (String candidate : buildCodeCandidates(parsedCode)) {
             Optional<Employee> found = empDAO.findByEmployeeCode(candidate);
-            if (found.isPresent()) {
-                logger.info("Matched '{}' via candidate code '{}'", parsedCode, candidate);
-                return found;
-            }
+            if (found.isPresent()) return found;
         }
         return Optional.empty();
     }
@@ -232,21 +229,20 @@ public class AttendanceController {
     private List<String> buildCodeCandidates(String parsedCode) {
         List<String> candidates = new ArrayList<>();
         candidates.add(parsedCode);
-
         String digits = parsedCode.replaceAll("[^0-9]", "");
         if (!digits.isEmpty()) {
             String raw = digits.replaceFirst("^0+", "");
             if (raw.isEmpty()) raw = "0";
-
             candidates.add(raw);
             candidates.add(String.format("%02d", Integer.parseInt(raw)));
             candidates.add(String.format("%03d", Integer.parseInt(raw)));
             candidates.add("EMP" + raw);
             candidates.add("EMP" + String.format("%02d", Integer.parseInt(raw)));
         }
-
         return new ArrayList<>(new LinkedHashSet<>(candidates));
     }
+
+    // ── Load & filter ──────────────────────────────────────────────────────
 
     private void loadFromDatabase() {
         new Thread(() -> {
@@ -259,147 +255,29 @@ public class AttendanceController {
                     applyFilters();
                     updateStats();
                 });
-            } catch (Exception ex) {
-                logger.error("Load from DB failed", ex);
-            }
+            } catch (Exception ex) { logger.error("Load from DB failed", ex); }
         }).start();
     }
 
-
-
-    private void setupTableColumns() {
-
-        employeeCodeColumn.setCellValueFactory(c -> {
-            Integer id = c.getValue().getEmployeeId();
-            Employee emp = id != null ? empCache.get(id) : null;
-            String code = emp != null ? emp.getEmployeeCode() : (id != null ? "ID:" + id : "?");
-            return new SimpleStringProperty(code);
-        });
-
-        employeeNameColumn.setCellValueFactory(c -> {
-            Integer id = c.getValue().getEmployeeId();
-            Employee emp = id != null ? empCache.get(id) : null;
-            return new SimpleStringProperty(emp != null ? emp.getFullName() : (id != null ? "ID:" + id : "Unknown"));
-        });
-
-        dateColumn.setCellValueFactory(c -> {
-            LocalDate d = c.getValue().getAttendanceDate();
-            return new SimpleStringProperty(d != null ? d.format(DATE_FMT) : "-");
-        });
-
-        timeIn1Column.setCellValueFactory(c -> {
-            var t = c.getValue().getTimeIn1();
-            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "Missed");
-        });
-        timeOut1Column.setCellValueFactory(c -> {
-            var t = c.getValue().getTimeOut1();
-            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "Missed");
-        });
-        timeIn2Column.setCellValueFactory(c -> {
-            var t = c.getValue().getTimeIn2();
-            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "Missed");
-        });
-        timeOut2Column.setCellValueFactory(c -> {
-            var t = c.getValue().getTimeOut2();
-            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "Missed");
-        });
-
-        regularHoursColumn.setCellValueFactory(c -> {
-            AttendanceRecord r = c.getValue();
-            if (r.isAbsent()) return new SimpleStringProperty("0.0");
-            if (r.getTimeIn1() != null && r.getTimeOut2() != null) {
-                long mins = java.time.Duration.between(r.getTimeIn1(), r.getTimeOut2()).toMinutes();
-                if (r.getTimeOut1() != null && r.getTimeIn2() != null) {
-                    mins -= java.time.Duration.between(r.getTimeOut1(), r.getTimeIn2()).toMinutes();
-                } else if (mins > 300) {
-                    mins -= 60;
-                }
-                double reg = Math.min(mins / 60.0, 8.0);
-                return new SimpleStringProperty(String.format("%.1f", reg));
-            }
-            return new SimpleStringProperty("-");
-        });
-
-        overtimeColumn.setCellValueFactory(c -> {
-            AttendanceRecord r = c.getValue();
-            if (r.isAbsent()) return new SimpleStringProperty("0.0");
-            if (r.getTimeIn1() != null && r.getTimeOut2() != null) {
-                long mins = java.time.Duration.between(r.getTimeIn1(), r.getTimeOut2()).toMinutes();
-                if (r.getTimeOut1() != null && r.getTimeIn2() != null) {
-                    mins -= java.time.Duration.between(r.getTimeOut1(), r.getTimeIn2()).toMinutes();
-                } else if (mins > 300) {
-                    mins -= 60;
-                }
-                double ot = Math.max(0, mins / 60.0 - 8.0);
-                return new SimpleStringProperty(ot > 0 ? String.format("%.1f", ot) : "0.0");
-            }
-            return new SimpleStringProperty("0.0");
-        });
-
-        statusColumn.setCellValueFactory(c -> {
-            AttendanceRecord r = c.getValue();
-            if (r.isAbsent()) return new SimpleStringProperty("ABSENT");
-            if (r.isHasAnomaly()) return new SimpleStringProperty("ANOMALY");
-            return new SimpleStringProperty("PRESENT");
-        });
-        statusColumn.setCellFactory(col -> new TableCell<>() {
-            @Override protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
-                if (empty || item == null) { setGraphic(null); return; }
-                Label b = new Label(item);
-                b.getStyleClass().add("badge");
-                b.getStyleClass().add(switch (item) {
-                    case "PRESENT" -> "badge-success";
-                    case "ABSENT"  -> "badge-error";
-                    default        -> "badge-warning";
-                });
-                setGraphic(b);
-            }
-        });
-
-        actionsColumn.setCellFactory(col -> new TableCell<>() {
-            private final Button viewBtn = new Button("View");
-            private final Button editBtn = new Button("Edit");
-            @Override protected void updateItem(Void v, boolean empty) {
-                super.updateItem(v, empty);
-                if (empty) { setGraphic(null); return; }
-                viewBtn.getStyleClass().add("button-secondary");
-                viewBtn.setStyle("-fx-padding:4px 10px;-fx-font-size:11px;");
-                editBtn.getStyleClass().add("button-secondary");
-                editBtn.setStyle("-fx-padding:4px 10px;-fx-font-size:11px;");
-                AttendanceRecord r = getTableView().getItems().get(getIndex());
-                viewBtn.setOnAction(e -> showDetail(r));
-                editBtn.setOnAction(e -> showInfoAlert("Edit",
-                        "Manual editing of attendance records (F10) will be available in a future release."));
-                setGraphic(new HBox(5, viewBtn, editBtn));
-            }
-        });
-    }
-
-
-    @FXML private void handleApplyDateFilter() { loadFromDatabase(); }
-    @FXML private void handleFilterToday()     { LocalDate t = LocalDate.now(); startDatePicker.setValue(t); endDatePicker.setValue(t); loadFromDatabase(); }
-    @FXML private void handleFilterThisWeek()  { LocalDate n = LocalDate.now(); startDatePicker.setValue(n.minusDays(n.getDayOfWeek().getValue()-1)); endDatePicker.setValue(n); loadFromDatabase(); }
-    @FXML private void handleFilterThisMonth() { LocalDate n = LocalDate.now(); startDatePicker.setValue(n.withDayOfMonth(1)); endDatePicker.setValue(n); loadFromDatabase(); }
-    @FXML private void handleFilterAnomalies() { applyFilters(); }
-    @FXML private void handleRefresh()         { loadFromDatabase(); }
-    @FXML private void handleValidateAll()     { showInfoAlert("Validate","Anomaly detection runs automatically during import (F3). Check yellow badges for flagged records."); }
-    @FXML private void handleExport()          { showInfoAlert("Export","Report export will be implemented in a future update."); }
-    @FXML private void handlePreviousPage()    { /* TODO pagination */ }
-    @FXML private void handleNextPage()        { /* TODO pagination */ }
-
     private void applyFilters() {
         filteredRecords.clear();
+        anomalyRecords.clear();
+
         LocalDate s  = startDatePicker.getValue();
         LocalDate e  = endDatePicker.getValue();
         boolean ano  = showAnomaliesOnly.isSelected();
+
         for (AttendanceRecord r : allRecords) {
             if (s != null && r.getAttendanceDate().isBefore(s)) continue;
             if (e != null && r.getAttendanceDate().isAfter(e))  continue;
+            if (r.isHasAnomaly()) anomalyRecords.add(r);
             if (ano && !r.isHasAnomaly()) continue;
             filteredRecords.add(r);
         }
+
         recordCountLabel.setText(filteredRecords.size() + " records");
+        if (anomalyCountLabel != null)
+            anomalyCountLabel.setText(anomalyRecords.size() + " anomalies");
     }
 
     private void updateStats() {
@@ -416,6 +294,191 @@ public class AttendanceController {
                 ? String.format("%.1f%%", (total - absent) * 100.0 / total) : "0%");
     }
 
+    // ── Table setup ────────────────────────────────────────────────────────
+
+    private void setupTableColumns() {
+        employeeCodeColumn.setCellValueFactory(c -> {
+            Integer id = c.getValue().getEmployeeId();
+            Employee emp = id != null ? empCache.get(id) : null;
+            return new SimpleStringProperty(emp != null ? emp.getEmployeeCode() : (id != null ? "ID:" + id : "?"));
+        });
+        employeeNameColumn.setCellValueFactory(c -> {
+            Integer id = c.getValue().getEmployeeId();
+            Employee emp = id != null ? empCache.get(id) : null;
+            return new SimpleStringProperty(emp != null ? emp.getFullName() : (id != null ? "ID:" + id : "Unknown"));
+        });
+        dateColumn.setCellValueFactory(c -> {
+            LocalDate d = c.getValue().getAttendanceDate();
+            return new SimpleStringProperty(d != null ? d.format(DATE_FMT) : "-");
+        });
+        timeIn1Column.setCellValueFactory(c -> {
+            var t = c.getValue().getTimeIn1();
+            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "Missed");
+        });
+        timeOut1Column.setCellValueFactory(c -> {
+            var t = c.getValue().getTimeOut1();
+            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "Missed");
+        });
+        timeIn2Column.setCellValueFactory(c -> {
+            var t = c.getValue().getTimeIn2();
+            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "Missed");
+        });
+        timeOut2Column.setCellValueFactory(c -> {
+            var t = c.getValue().getTimeOut2();
+            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "Missed");
+        });
+        regularHoursColumn.setCellValueFactory(c -> {
+            AttendanceRecord r = c.getValue();
+            if (r.isAbsent() || r.isOnLeave()) return new SimpleStringProperty("0.0");
+            if (r.getTimeIn1() != null && r.getTimeOut2() != null) {
+                long mins = java.time.Duration.between(r.getTimeIn1(), r.getTimeOut2()).toMinutes();
+                if (r.getTimeOut1() != null && r.getTimeIn2() != null)
+                    mins -= java.time.Duration.between(r.getTimeOut1(), r.getTimeIn2()).toMinutes();
+                else if (mins > 300) mins -= 60;
+                return new SimpleStringProperty(String.format("%.1f", Math.min(mins / 60.0, 8.0)));
+            }
+            return new SimpleStringProperty("-");
+        });
+        overtimeColumn.setCellValueFactory(c -> {
+            AttendanceRecord r = c.getValue();
+            if (r.isAbsent() || r.isOnLeave()) return new SimpleStringProperty("0.0");
+            if (r.getTimeIn1() != null && r.getTimeOut2() != null) {
+                long mins = java.time.Duration.between(r.getTimeIn1(), r.getTimeOut2()).toMinutes();
+                if (r.getTimeOut1() != null && r.getTimeIn2() != null)
+                    mins -= java.time.Duration.between(r.getTimeOut1(), r.getTimeIn2()).toMinutes();
+                else if (mins > 300) mins -= 60;
+                double ot = Math.max(0, mins / 60.0 - 8.0);
+                return new SimpleStringProperty(ot > 0 ? String.format("%.1f", ot) : "0.0");
+            }
+            return new SimpleStringProperty("0.0");
+        });
+        statusColumn.setCellValueFactory(c -> {
+            AttendanceRecord r = c.getValue();
+            if (r.isOnLeave())    return new SimpleStringProperty("ON LEAVE");
+            if (r.isAbsent())     return new SimpleStringProperty("ABSENT");
+            if (r.isHasAnomaly()) return new SimpleStringProperty("ANOMALY");
+            return new SimpleStringProperty("PRESENT");
+        });
+        statusColumn.setCellFactory(col -> new TableCell<>() {
+            @Override protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+                if (empty || item == null) { setGraphic(null); return; }
+                Label b = new Label(item);
+                b.getStyleClass().add("badge");
+                b.getStyleClass().add(switch (item) {
+                    case "PRESENT"  -> "badge-success";
+                    case "ABSENT"   -> "badge-error";
+                    case "ON LEAVE" -> "badge-info";
+                    default         -> "badge-warning";
+                });
+                setGraphic(b);
+            }
+        });
+        actionsColumn.setCellFactory(col -> new TableCell<>() {
+            private final Button viewBtn     = new Button("View");
+            private final Button overrideBtn = new Button("Override");
+            @Override protected void updateItem(Void v, boolean empty) {
+                super.updateItem(v, empty);
+                if (empty) { setGraphic(null); return; }
+                viewBtn.getStyleClass().add("button-secondary");
+                viewBtn.setStyle("-fx-padding:4px 10px;-fx-font-size:11px;");
+                overrideBtn.getStyleClass().add("button-secondary");
+                overrideBtn.setStyle("-fx-padding:4px 10px;-fx-font-size:11px;-fx-background-color:#FEF3C7;-fx-text-fill:#92400E;");
+                AttendanceRecord r = getTableView().getItems().get(getIndex());
+                viewBtn.setOnAction(e -> showDetail(r));
+                overrideBtn.setOnAction(e -> openOverrideDialog(r));
+                setGraphic(new HBox(5, viewBtn, overrideBtn));
+            }
+        });
+    }
+
+    private void setupAnomalyColumns() {
+        if (anEmpCodeCol == null) return; // guard if FXML doesn't have anomaly tab yet
+
+        anEmpCodeCol.setCellValueFactory(c -> {
+            Integer id = c.getValue().getEmployeeId();
+            Employee emp = id != null ? empCache.get(id) : null;
+            return new SimpleStringProperty(emp != null ? emp.getEmployeeCode() : "?");
+        });
+        anEmpNameCol.setCellValueFactory(c -> {
+            Integer id = c.getValue().getEmployeeId();
+            Employee emp = id != null ? empCache.get(id) : null;
+            return new SimpleStringProperty(emp != null ? emp.getFullName() : "Unknown");
+        });
+        anDateCol.setCellValueFactory(c ->
+            new SimpleStringProperty(c.getValue().getAttendanceDate().format(DATE_FMT)));
+        anTimeInCol.setCellValueFactory(c -> {
+            var t = c.getValue().getTimeIn1();
+            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "—");
+        });
+        anTimeOutCol.setCellValueFactory(c -> {
+            var t = c.getValue().getTimeOut2();
+            return new SimpleStringProperty(t != null ? t.format(TIME_FMT) : "—");
+        });
+        anDescCol.setCellValueFactory(c ->
+            new SimpleStringProperty(c.getValue().getAnomalyDescription() != null
+                ? c.getValue().getAnomalyDescription() : "—"));
+        anActionsCol.setCellFactory(col -> new TableCell<>() {
+            private final Button fixBtn = new Button("Fix");
+            @Override protected void updateItem(Void v, boolean empty) {
+                super.updateItem(v, empty);
+                if (empty) { setGraphic(null); return; }
+                fixBtn.getStyleClass().add("button-secondary");
+                fixBtn.setStyle("-fx-padding:4px 12px;-fx-font-size:11px;-fx-background-color:#FEF3C7;-fx-text-fill:#92400E;");
+                AttendanceRecord r = getTableView().getItems().get(getIndex());
+                fixBtn.setOnAction(e -> openOverrideDialog(r));
+                setGraphic(fixBtn);
+            }
+        });
+    }
+
+    // ── Override dialog ────────────────────────────────────────────────────
+
+    private void openOverrideDialog(AttendanceRecord record) {
+        try {
+            FXMLLoader loader = new FXMLLoader(
+                    getClass().getResource("/fxml/attendance-override.fxml"));
+            Scene scene = new Scene(loader.load());
+            scene.getStylesheets().add(
+                    getClass().getResource("/css/styles.css").toExternalForm());
+
+            AttendanceOverrideController ctrl = loader.getController();
+            ctrl.setRecord(record);
+
+            Stage stage = new Stage();
+            stage.setTitle("Manual Override — " + record.getAttendanceDate().format(DATE_FMT));
+            stage.setScene(scene);
+            stage.initModality(Modality.APPLICATION_MODAL);
+            stage.setResizable(false);
+            stage.showAndWait();
+
+            if (ctrl.isSaved()) {
+                loadFromDatabase(); // refresh all views
+                showInfoAlert("Override Applied",
+                        "Attendance record for " + record.getAttendanceDate().format(DATE_FMT)
+                        + " has been updated and flagged as manually edited.");
+            }
+        } catch (Exception e) {
+            logger.error("Failed to open override dialog", e);
+            showInfoAlert("Error", "Could not open override dialog: " + e.getMessage());
+        }
+    }
+
+    // ── Filter action handlers ─────────────────────────────────────────────
+
+    @FXML private void handleApplyDateFilter() { loadFromDatabase(); }
+    @FXML private void handleFilterToday()     { LocalDate t = LocalDate.now(); startDatePicker.setValue(t); endDatePicker.setValue(t); loadFromDatabase(); }
+    @FXML private void handleFilterThisWeek()  { LocalDate n = LocalDate.now(); startDatePicker.setValue(n.minusDays(n.getDayOfWeek().getValue()-1)); endDatePicker.setValue(n); loadFromDatabase(); }
+    @FXML private void handleFilterThisMonth() { LocalDate n = LocalDate.now(); startDatePicker.setValue(n.withDayOfMonth(1)); endDatePicker.setValue(n); loadFromDatabase(); }
+    @FXML private void handleFilterAnomalies() { applyFilters(); }
+    @FXML private void handleRefresh()         { loadFromDatabase(); }
+    @FXML private void handleValidateAll()     { showInfoAlert("Validate","Anomaly detection runs automatically during import (F3). Check the Anomalies tab for flagged records."); }
+    @FXML private void handleExport()          { showInfoAlert("Export","Report export will be implemented in a future update."); }
+    @FXML private void handlePreviousPage()    { /* TODO pagination */ }
+    @FXML private void handleNextPage()        { /* TODO pagination */ }
+
+    // ── Detail & info dialogs ──────────────────────────────────────────────
+
     private void showDetail(AttendanceRecord r) {
         Alert a = new Alert(Alert.AlertType.INFORMATION);
         a.setTitle("Attendance Details");
@@ -426,9 +489,11 @@ public class AttendanceController {
         sb.append("Lunch ✕ : ").append(r.getTimeOut1() != null ? r.getTimeOut1().format(TIME_FMT) : "Missed").append("\n");
         sb.append("Lunch → : ").append(r.getTimeIn2()  != null ? r.getTimeIn2().format(TIME_FMT)  : "Missed").append("\n");
         sb.append("Out     : ").append(r.getTimeOut2() != null ? r.getTimeOut2().format(TIME_FMT) : "Missed").append("\n\n");
-        if (r.isAbsent())          sb.append("Status  : ABSENT\n");
+        if (r.isOnLeave())        sb.append("Status  : ON LEAVE (").append(r.getLeaveType().name().replace("_", " ")).append(")\n");
+        else if (r.isAbsent())    sb.append("Status  : ABSENT\n");
         else if (r.isHasAnomaly()) sb.append("Status  : ANOMALY – ").append(r.getAnomalyDescription()).append("\n");
         else                       sb.append("Status  : PRESENT\n");
+        if (r.isManuallyEdited()) sb.append("\n⚠ Manually edited record");
         a.setContentText(sb.toString());
         a.showAndWait();
     }

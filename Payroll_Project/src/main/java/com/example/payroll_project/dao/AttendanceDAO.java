@@ -16,11 +16,31 @@ import java.util.Optional;
 
 /**
  * Attendance Record DAO (CR1, F10)
+ * Supports leave_type column with automatic schema migration.
  */
 public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
 
     private static final Logger logger = LoggerFactory.getLogger(AttendanceDAO.class);
     private final DatabaseManager db = DatabaseManager.getInstance();
+
+    /** Ensures the leave_type column exists (runs once at construction time). */
+    public AttendanceDAO() {
+        ensureLeaveTypeColumn();
+    }
+
+    private void ensureLeaveTypeColumn() {
+        String check = "SELECT COUNT(*) FROM pragma_table_info('attendance_records') WHERE name='leave_type'";
+        try (Connection c = db.getConnection();
+             Statement s  = c.createStatement();
+             ResultSet rs = s.executeQuery(check)) {
+            if (rs.next() && rs.getInt(1) == 0) {
+                s.execute("ALTER TABLE attendance_records ADD COLUMN leave_type TEXT DEFAULT 'NONE'");
+                logger.info("Migration: added leave_type column to attendance_records");
+            }
+        } catch (Exception e) {
+            logger.warn("Could not verify/add leave_type column: {}", e.getMessage());
+        }
+    }
 
     @Override
     public AttendanceRecord create(AttendanceRecord r) throws SQLException {
@@ -32,14 +52,12 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
                 late_minutes, undertime_minutes,
                 is_absent, is_holiday, is_rest_day,
                 has_anomaly, anomaly_description, is_manually_edited,
-                import_batch_id, data_source,
+                import_batch_id, data_source, leave_type,
                 created_by, created_at
-            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
         """;
-
         try (Connection c = db.getConnection();
              PreparedStatement ps = c.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-
             ps.setInt   (1, r.getEmployeeId());
             ps.setDate  (2, Date.valueOf(r.getAttendanceDate()));
             setTime(ps, 3, r.getTimeIn1());
@@ -59,10 +77,10 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
             ps.setBoolean(17, r.isManuallyEdited());
             ps.setObject(18, r.getImportBatchId());
             ps.setString(19, r.getDataSource() != null ? r.getDataSource() : "FA2000_CSV");
-            ps.setObject(20, r.getCreatedBy());
-            ps.setTimestamp(21, Timestamp.valueOf(
+            ps.setString(20, r.getLeaveType() != null ? r.getLeaveType().name() : "NONE");
+            ps.setObject(21, r.getCreatedBy());
+            ps.setTimestamp(22, Timestamp.valueOf(
                     r.getCreatedAt() != null ? r.getCreatedAt() : LocalDateTime.now()));
-
             ps.executeUpdate();
             try (ResultSet keys = ps.getGeneratedKeys()) {
                 if (keys.next()) r.setAttendanceId(keys.getInt(1));
@@ -73,8 +91,9 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
 
     @Override
     public Optional<AttendanceRecord> findById(Integer id) throws SQLException {
-        String sql = "SELECT * FROM attendance_records WHERE attendance_id = ?";
-        try (Connection c = db.getConnection(); PreparedStatement ps = c.prepareStatement(sql)) {
+        try (Connection c = db.getConnection();
+             PreparedStatement ps = c.prepareStatement(
+                     "SELECT * FROM attendance_records WHERE attendance_id=?")) {
             ps.setInt(1, id);
             try (ResultSet rs = ps.executeQuery()) {
                 if (rs.next()) return Optional.of(map(rs));
@@ -97,6 +116,7 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
                 late_minutes=?, undertime_minutes=?,
                 is_absent=?, is_holiday=?, is_rest_day=?,
                 has_anomaly=?, anomaly_description=?,
+                leave_type=?,
                 is_manually_edited=1,
                 updated_by=?, updated_at=?
             WHERE attendance_id=?
@@ -116,9 +136,10 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
             ps.setBoolean(12, r.isRestDay());
             ps.setBoolean(13, r.isHasAnomaly());
             ps.setString (14, r.getAnomalyDescription());
-            ps.setObject (15, r.getUpdatedBy());
-            ps.setTimestamp(16, Timestamp.valueOf(LocalDateTime.now()));
-            ps.setInt    (17, r.getAttendanceId());
+            ps.setString (15, r.getLeaveType() != null ? r.getLeaveType().name() : "NONE");
+            ps.setObject (16, r.getUpdatedBy());
+            ps.setTimestamp(17, Timestamp.valueOf(LocalDateTime.now()));
+            ps.setInt    (18, r.getAttendanceId());
             return ps.executeUpdate() > 0;
         }
     }
@@ -146,20 +167,20 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
     @Override
     public long count() throws SQLException {
         try (Connection c = db.getConnection();
-             Statement s = c.createStatement();
+             Statement s  = c.createStatement();
              ResultSet rs = s.executeQuery("SELECT COUNT(*) FROM attendance_records")) {
             return rs.next() ? rs.getLong(1) : 0;
         }
     }
 
+    // ── Custom queries ─────────────────────────────────────────────────────
 
     public List<AttendanceRecord> findByEmployeeAndPeriod(int employeeId,
-                                                            LocalDate from,
-                                                            LocalDate to) throws SQLException {
+                                                           LocalDate from,
+                                                           LocalDate to) throws SQLException {
         String sql = """
             SELECT * FROM attendance_records
-            WHERE employee_id = ?
-              AND attendance_date BETWEEN ? AND ?
+            WHERE employee_id=? AND attendance_date BETWEEN ? AND ?
             ORDER BY attendance_date
         """;
         List<AttendanceRecord> list = new ArrayList<>();
@@ -167,9 +188,7 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
             ps.setInt (1, employeeId);
             ps.setDate(2, Date.valueOf(from));
             ps.setDate(3, Date.valueOf(to));
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(map(rs));
-            }
+            try (ResultSet rs = ps.executeQuery()) { while (rs.next()) list.add(map(rs)); }
         }
         return list;
     }
@@ -178,7 +197,6 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
         String sql = (from != null && to != null)
             ? "SELECT * FROM attendance_records WHERE attendance_date BETWEEN ? AND ? ORDER BY attendance_date, employee_id"
             : "SELECT * FROM attendance_records ORDER BY attendance_date, employee_id";
-
         List<AttendanceRecord> list = new ArrayList<>();
         try (Connection c = db.getConnection()) {
             PreparedStatement ps;
@@ -189,9 +207,7 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
             } else {
                 ps = c.prepareStatement(sql);
             }
-            try (ResultSet rs = ps.executeQuery()) {
-                while (rs.next()) list.add(map(rs));
-            }
+            try (ResultSet rs = ps.executeQuery()) { while (rs.next()) list.add(map(rs)); }
             ps.close();
         }
         return list;
@@ -225,6 +241,7 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
         return create(r);
     }
 
+    // ── Mapping ────────────────────────────────────────────────────────────
 
     private AttendanceRecord map(ResultSet rs) throws SQLException {
         AttendanceRecord r = new AttendanceRecord();
@@ -248,6 +265,10 @@ public class AttendanceDAO implements BaseDAO<AttendanceRecord, Integer> {
         r.setManuallyEdited(rs.getBoolean("is_manually_edited"));
         r.setImportBatchId ((Integer) rs.getObject("import_batch_id"));
         r.setDataSource    (rs.getString("data_source"));
+        // leave_type (nullable, default NONE)
+        String lt = rs.getString("leave_type");
+        try { r.setLeaveType(lt != null ? AttendanceRecord.LeaveType.valueOf(lt) : AttendanceRecord.LeaveType.NONE); }
+        catch (IllegalArgumentException e) { r.setLeaveType(AttendanceRecord.LeaveType.NONE); }
         Timestamp ca = rs.getTimestamp("created_at");
         if (ca != null) r.setCreatedAt(ca.toLocalDateTime());
         return r;

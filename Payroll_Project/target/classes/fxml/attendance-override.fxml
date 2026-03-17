@@ -1,0 +1,136 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/21"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.example.payroll_project.controller.AttendanceOverrideController"
+      spacing="0"
+      style="-fx-padding: 0; -fx-min-width: 460px;">
+
+    <!-- Header -->
+    <VBox style="-fx-background-color: #1E3A8A; -fx-padding: 20px 24px;">
+        <Label text="✏️  Manual Attendance Override (F10)"
+               style="-fx-font-size: 16px; -fx-font-weight: 600; -fx-text-fill: white;"/>
+        <Label fx:id="leaveInfoLabel" text=""
+               style="-fx-font-size: 12px; -fx-text-fill: rgba(255,255,255,0.75); -fx-padding: 4 0 0 0;"/>
+    </VBox>
+
+    <!-- Mode selector -->
+    <VBox style="-fx-background-color: #F9FAFB; -fx-padding: 16px 24px; -fx-border-color: #E5E7EB; -fx-border-width: 0 0 1 0;">
+        <Label text="Override Type" style="-fx-font-size: 12px; -fx-font-weight: 600; -fx-text-fill: #374151;"/>
+        <HBox spacing="20" style="-fx-padding: 10 0 0 0;">
+            <RadioButton fx:id="modeLeave"   text="🏥  Leave"     style="-fx-font-size: 13px;"/>
+            <RadioButton fx:id="modeTime"    text="⏱️  Time Correction" style="-fx-font-size: 13px;"/>
+            <RadioButton fx:id="modeHoliday" text="🗓️  Holiday / Rest Day" style="-fx-font-size: 13px;"/>
+        </HBox>
+    </VBox>
+
+    <!-- Content area -->
+    <VBox style="-fx-padding: 20px 24px;" spacing="0">
+
+        <!-- ═══ LEAVE PANE ═══ -->
+        <VBox fx:id="leavePane" spacing="14">
+            <Label text="Select Leave Type"
+                   style="-fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #374151;"/>
+            <ComboBox fx:id="leaveTypeCombo" maxWidth="Infinity"
+                      style="-fx-font-size: 13px;"/>
+            <VBox style="-fx-background-color: #EFF6FF; -fx-background-radius: 8px;
+                         -fx-border-color: #3B82F6; -fx-border-radius: 8px;
+                         -fx-border-width: 1; -fx-padding: 12px;" spacing="6">
+                <Label text="ℹ️  Leave rules" style="-fx-font-weight: 600; -fx-text-fill: #1E40AF; -fx-font-size: 12px;"/>
+                <Label text="• The employee will be treated as On Leave (not absent)"
+                       style="-fx-font-size: 12px; -fx-text-fill: #1E40AF;"/>
+                <Label text="• Time entries will be cleared; regular hours apply per company policy"
+                       style="-fx-font-size: 12px; -fx-text-fill: #1E40AF;"/>
+                <Label text="• Record is flagged is_manually_edited = true for audit trail"
+                       style="-fx-font-size: 12px; -fx-text-fill: #1E40AF;"/>
+            </VBox>
+        </VBox>
+
+        <!-- ═══ TIME CORRECTION PANE ═══ -->
+        <VBox fx:id="timePane" spacing="14" managed="false" visible="false">
+            <Label text="Correct Attendance Times"
+                   style="-fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #374151;"/>
+            <Label text="Use HH:mm 24-hour format (e.g. 08:30, 17:00). Leave blank if punch did not occur."
+                   style="-fx-font-size: 12px; -fx-text-fill: #6B7280;" wrapText="true"/>
+
+            <GridPane hgap="16" vgap="12">
+                <columnConstraints>
+                    <ColumnConstraints percentWidth="50"/>
+                    <ColumnConstraints percentWidth="50"/>
+                </columnConstraints>
+                <VBox spacing="5" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                    <Label text="Time In (morning)" style="-fx-font-size: 12px; -fx-font-weight: 600;"/>
+                    <TextField fx:id="timeIn1Field" promptText="08:00"/>
+                </VBox>
+                <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                    <Label text="Lunch Out" style="-fx-font-size: 12px; -fx-font-weight: 600;"/>
+                    <TextField fx:id="timeOut1Field" promptText="12:00"/>
+                </VBox>
+                <VBox spacing="5" GridPane.columnIndex="0" GridPane.rowIndex="1">
+                    <Label text="Lunch In" style="-fx-font-size: 12px; -fx-font-weight: 600;"/>
+                    <TextField fx:id="timeIn2Field" promptText="13:00"/>
+                </VBox>
+                <VBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                    <Label text="Time Out (evening)" style="-fx-font-size: 12px; -fx-font-weight: 600;"/>
+                    <TextField fx:id="timeOut2Field" promptText="17:00"/>
+                </VBox>
+            </GridPane>
+
+            <VBox style="-fx-background-color: #FEF3C7; -fx-background-radius: 8px;
+                         -fx-border-color: #F59E0B; -fx-border-radius: 8px;
+                         -fx-border-width: 1; -fx-padding: 10px;" spacing="4">
+                <Label text="⚠️  Correction notes"
+                       style="-fx-font-weight: 600; -fx-text-fill: #92400E; -fx-font-size: 12px;"/>
+                <Label text="• Anomaly flag will be cleared automatically if both Time In and Time Out are provided"
+                       style="-fx-font-size: 12px; -fx-text-fill: #92400E;"/>
+                <Label text="• If only Time In is filled, an anomaly (missing clock-out) will remain"
+                       style="-fx-font-size: 12px; -fx-text-fill: #92400E;"/>
+            </VBox>
+        </VBox>
+
+        <!-- ═══ HOLIDAY PANE ═══ -->
+        <VBox fx:id="holidayPane" spacing="14" managed="false" visible="false">
+            <Label text="Set Day Type"
+                   style="-fx-font-size: 13px; -fx-font-weight: 600; -fx-text-fill: #374151;"/>
+            <VBox spacing="10">
+                <RadioButton fx:id="holidayNone"    text="Regular workday (no special flag)"
+                             style="-fx-font-size: 13px;"/>
+                <RadioButton fx:id="holidayRegular" text="🔴  Regular Holiday (200% premium pay)"
+                             style="-fx-font-size: 13px;"/>
+                <RadioButton fx:id="holidaySpecial" text="🟡  Special (Non-Working) Holiday (130% premium pay)"
+                             style="-fx-font-size: 13px;"/>
+                <RadioButton fx:id="holidayRestDay" text="🔵  Rest Day / Day Off"
+                             style="-fx-font-size: 13px;"/>
+            </VBox>
+            <VBox style="-fx-background-color: #EFF6FF; -fx-background-radius: 8px;
+                         -fx-border-color: #3B82F6; -fx-border-radius: 8px;
+                         -fx-border-width: 1; -fx-padding: 10px;" spacing="4">
+                <Label text="ℹ️  Premium pay rates follow the Philippine Labor Code"
+                       style="-fx-font-size: 12px; -fx-text-fill: #1E40AF;"/>
+            </VBox>
+        </VBox>
+
+    </VBox>
+
+    <!-- Error -->
+    <Label fx:id="errorLabel"
+           style="-fx-background-color: #FEE2E2; -fx-text-fill: #991B1B;
+                  -fx-padding: 8px 24px; -fx-font-size: 12px;"
+           wrapText="true" maxWidth="Infinity" visible="false"/>
+
+    <!-- Footer -->
+    <HBox spacing="10" alignment="CENTER_RIGHT"
+          style="-fx-padding: 16px 24px; -fx-background-color: #F9FAFB;
+                 -fx-border-color: #E5E7EB; -fx-border-width: 1 0 0 0;">
+        <Button fx:id="cancelButton" text="Cancel"
+                styleClass="button-secondary" onAction="#handleCancel"
+                style="-fx-padding: 9px 22px;"/>
+        <Button fx:id="applyButton" text="Apply Override"
+                styleClass="button-primary" onAction="#handleApply"
+                style="-fx-padding: 9px 22px;"/>
+    </HBox>
+</VBox>
