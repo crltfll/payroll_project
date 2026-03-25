@@ -10,7 +10,6 @@ import java.math.RoundingMode;
  */
 public class PhilHealthCalculationService {
 
-    private static final BigDecimal PREMIUM_RATE   = new BigDecimal("0.05");
     private static final BigDecimal EMPLOYEE_RATE  = new BigDecimal("0.025");
     private static final BigDecimal EMPLOYER_RATE  = new BigDecimal("0.025");
     private static final BigDecimal SALARY_FLOOR   = new BigDecimal("10000");
@@ -29,7 +28,7 @@ public class PhilHealthCalculationService {
 
     private BigDecimal effectiveBase(BigDecimal salary) {
         if (salary == null || salary.compareTo(BigDecimal.ZERO) <= 0) {
-            return SALARY_FLOOR;
+            return BigDecimal.ZERO;
         }
         if (salary.compareTo(SALARY_FLOOR) < 0) return SALARY_FLOOR;
         if (salary.compareTo(SALARY_CEILING) > 0) return SALARY_CEILING;

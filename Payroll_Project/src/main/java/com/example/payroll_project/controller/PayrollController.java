@@ -7,6 +7,7 @@ import com.example.payroll_project.dao.PayrollDAO;
 import com.example.payroll_project.model.*;
 import com.example.payroll_project.service.PayrollService;
 import com.example.payroll_project.service.PayslipGeneratorService;
+import com.example.payroll_project.util.DatabaseManager;
 import javafx.application.Platform;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -19,7 +20,7 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.math.BigDecimal;
-import java.sql.SQLException;
+import java.sql.*;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
@@ -30,7 +31,6 @@ import java.util.Optional;
 
 /**
  * Payroll Controller (CR4, CR6, F1, F12)
- *
  */
 public class PayrollController {
 
@@ -68,19 +68,20 @@ public class PayrollController {
 
     @FXML private TextArea transparencyTextArea;
 
-    private final PayPeriodDAO   periodDAO   = new PayPeriodDAO();
-    private final PayrollDAO     payrollDAO  = new PayrollDAO();
-    private final EmployeeDAO    empDAO      = new EmployeeDAO();
-    private final AttendanceDAO  attDAO      = new AttendanceDAO();
-    private final PayrollService payrollSvc  = new PayrollService();
+    private final PayPeriodDAO  periodDAO  = new PayPeriodDAO();
+    private final PayrollDAO    payrollDAO = new PayrollDAO();
+    private final EmployeeDAO   empDAO     = new EmployeeDAO();
+    private final AttendanceDAO attDAO     = new AttendanceDAO();
+    private final PayrollService          payrollSvc = new PayrollService();
     private final PayslipGeneratorService payslipSvc = new PayslipGeneratorService();
 
-    private final ObservableList<PayPeriod>     periods  = FXCollections.observableArrayList();
-    private final ObservableList<PayrollRecord> records  = FXCollections.observableArrayList();
+    private final ObservableList<PayPeriod>     periods = FXCollections.observableArrayList();
+    private final ObservableList<PayrollRecord> records = FXCollections.observableArrayList();
 
     private PayPeriod selectedPeriod;
     private java.util.Map<Integer, Employee> empCache = new java.util.HashMap<>();
 
+    // ── Init ──────────────────────────────────────────────────────────────
 
     @FXML
     public void initialize() {
@@ -96,9 +97,12 @@ public class PayrollController {
         endDatePicker.setValue(now);
         payDatePicker.setValue(now.plusDays(5));
 
-        loadPayPeriods(true);   // true = auto-select most recent period
+        // Load cache first; pay periods + auto-select happen inside the callback
+        // so the employee map is always ready before any records are rendered.
         loadEmployeeCache();
     }
+
+    // ── Pay Period CRUD ───────────────────────────────────────────────────
 
     @FXML
     private void handleCreatePeriod() {
@@ -108,11 +112,13 @@ public class PayrollController {
         LocalDate pd = payDatePicker.getValue();
 
         if (name.isEmpty() || s == null || e == null) {
-            alert(Alert.AlertType.WARNING, "Validation", "Period name, start and end dates are required.");
+            alert(Alert.AlertType.WARNING, "Validation",
+                    "Period name, start and end dates are required.");
             return;
         }
         if (e.isBefore(s)) {
-            alert(Alert.AlertType.WARNING, "Validation", "End date must be after start date.");
+            alert(Alert.AlertType.WARNING, "Validation",
+                    "End date must be after start date.");
             return;
         }
 
@@ -126,13 +132,12 @@ public class PayrollController {
                         confirm.setTitle("Pay Period Already Exists");
                         confirm.setHeaderText("A pay period with this date range already exists.");
                         confirm.setContentText(
-                                "Existing: \"" + dup.getPeriodName() + "\" (" + dup.getStatus().name() + ")\n\n"
-                                        + "Would you like to select it instead of creating a duplicate?");
+                                "Existing: \"" + dup.getPeriodName() + "\" ("
+                                        + dup.getStatus().name() + ")\n\n"
+                                        + "Would you like to select it instead?");
                         confirm.getButtonTypes().setAll(ButtonType.YES, ButtonType.NO);
                         confirm.showAndWait().ifPresent(resp -> {
-                            if (resp == ButtonType.YES) {
-                                selectPayPeriod(dup);
-                            }
+                            if (resp == ButtonType.YES) selectPayPeriod(dup);
                         });
                     });
                     return;
@@ -142,44 +147,41 @@ public class PayrollController {
                 pp.setPayDate(pd);
                 pp.setCreatedBy(LoginController.getCurrentUser() != null
                         ? LoginController.getCurrentUser().getUserId() : null);
-
                 periodDAO.create(pp);
                 Platform.runLater(() -> {
                     loadPayPeriods(false);
-                    alert(Alert.AlertType.INFORMATION, "Success", "Pay period created successfully.");
+                    alert(Alert.AlertType.INFORMATION, "Success",
+                            "Pay period created successfully.");
                 });
             } catch (Exception ex) {
                 logger.error("Create period failed", ex);
-                Platform.runLater(() -> alert(Alert.AlertType.ERROR, "Error", ex.getMessage()));
+                Platform.runLater(() ->
+                        alert(Alert.AlertType.ERROR, "Error", ex.getMessage()));
             }
         }).start();
     }
-    @FXML
-    private void handleFilterPeriods() {
-        loadPayPeriods(false);
-    }
 
+    @FXML
+    private void handleFilterPeriods() { loadPayPeriods(false); }
 
     private void loadPayPeriods(boolean autoSelectFirst) {
         new Thread(() -> {
             try {
                 List<PayPeriod> all = periodDAO.findAll();
                 String filter = periodStatusFilter.getValue();
-                if (filter != null && !"All".equals(filter)) {
+                if (filter != null && !"All".equals(filter))
                     all.removeIf(p -> !p.getStatus().name().equals(filter));
-                }
+
                 Platform.runLater(() -> {
                     periods.setAll(all);
                     periodTable.setItems(periods);
 
-                    // FIX: auto-select the most recently created period so that
-                    // payroll records are visible immediately on app start.
                     if (autoSelectFirst && selectedPeriod == null && !periods.isEmpty()) {
                         selectPayPeriod(periods.get(0));
                     } else if (selectedPeriod != null) {
-                        // Re-select the currently selected period after a list refresh.
                         periods.stream()
-                                .filter(p -> p.getPayPeriodId().equals(selectedPeriod.getPayPeriodId()))
+                                .filter(p -> p.getPayPeriodId()
+                                        .equals(selectedPeriod.getPayPeriodId()))
                                 .findFirst()
                                 .ifPresent(this::selectPayPeriod);
                     }
@@ -189,6 +191,8 @@ public class PayrollController {
             }
         }).start();
     }
+
+    // ── Period table setup ────────────────────────────────────────────────
 
     private void setupPeriodTable() {
         colPeriodName.setCellValueFactory(c ->
@@ -207,10 +211,9 @@ public class PayrollController {
                 Label b = new Label(item);
                 b.getStyleClass().add("badge");
                 b.getStyleClass().add(switch (item) {
-                    case "FINALIZED","PAID" -> "badge-success";
-                    case "PROCESSING"       -> "badge-info";
-                    case "DRAFT"            -> "badge-warning";
-                    default                 -> "badge-warning";
+                    case "FINALIZED", "PAID" -> "badge-success";
+                    case "PROCESSING"        -> "badge-info";
+                    default                  -> "badge-warning";
                 });
                 setGraphic(b);
             }
@@ -234,7 +237,6 @@ public class PayrollController {
                 finalizeBtn.setStyle("-fx-padding:4px 10px;-fx-font-size:11px;");
                 finalizeBtn.setDisable(pp.isLocked());
 
-                // Delete is only allowed for non-locked (DRAFT / PROCESSING) periods
                 deleteBtn.getStyleClass().add("button-danger");
                 deleteBtn.setStyle("-fx-padding:4px 10px;-fx-font-size:11px;");
                 deleteBtn.setDisable(pp.isLocked());
@@ -243,7 +245,8 @@ public class PayrollController {
                 finalizeBtn.setOnAction(e -> finalizePayPeriod(pp));
                 deleteBtn.setOnAction(e   -> handleDeletePeriod(pp));
 
-                setGraphic(new javafx.scene.layout.HBox(4, selectBtn, finalizeBtn, deleteBtn));
+                setGraphic(new javafx.scene.layout.HBox(4,
+                        selectBtn, finalizeBtn, deleteBtn));
             }
         });
     }
@@ -274,28 +277,27 @@ public class PayrollController {
                         });
                     } catch (Exception ex) {
                         logger.error("Finalize failed", ex);
-                        Platform.runLater(() -> alert(Alert.AlertType.ERROR, "Error", ex.getMessage()));
+                        Platform.runLater(() ->
+                                alert(Alert.AlertType.ERROR, "Error", ex.getMessage()));
                     }
                 }).start();
             }
         });
     }
 
-
     private void handleDeletePeriod(PayPeriod pp) {
         if (pp.isLocked()) {
             alert(Alert.AlertType.WARNING, "Cannot Delete",
-                    "Finalized or paid pay periods cannot be deleted (regulatory requirement).");
+                    "Finalized or paid pay periods cannot be deleted.");
             return;
         }
-
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION);
         confirm.setTitle("Delete Pay Period");
         confirm.setHeaderText("Delete \"" + pp.getPeriodName() + "\"?");
         confirm.setContentText(
                 "This will permanently remove the pay period AND all associated\n"
-              + "payroll records. Attendance records are NOT affected.\n\n"
-              + "This action cannot be undone.");
+                        + "payroll records. Attendance records are NOT affected.\n\n"
+                        + "This action cannot be undone.");
         confirm.getButtonTypes().setAll(ButtonType.OK, ButtonType.CANCEL);
         confirm.showAndWait().ifPresent(resp -> {
             if (resp != ButtonType.OK) return;
@@ -303,46 +305,53 @@ public class PayrollController {
                 try {
                     List<PayrollRecord> associated =
                             payrollDAO.findByPayPeriod(pp.getPayPeriodId());
-                    for (PayrollRecord pr : associated) {
+                    for (PayrollRecord pr : associated)
                         payrollDAO.delete(pr.getPayrollId());
-                    }
                     periodDAO.delete(pp.getPayPeriodId());
 
                     Platform.runLater(() -> {
                         if (selectedPeriod != null &&
-                                selectedPeriod.getPayPeriodId().equals(pp.getPayPeriodId())) {
+                                selectedPeriod.getPayPeriodId()
+                                        .equals(pp.getPayPeriodId())) {
                             selectedPeriod = null;
-                            selectedPeriodLabel.setText("No period selected — click Select on a period above");
+                            selectedPeriodLabel.setText(
+                                    "No period selected — click Select on a period above");
                             records.clear();
                             updateSummaryStats(records);
                         }
                         loadPayPeriods(false);
                         alert(Alert.AlertType.INFORMATION, "Deleted",
-                                "Pay period \"" + pp.getPeriodName() + "\" has been deleted.");
+                                "Pay period \"" + pp.getPeriodName()
+                                        + "\" has been deleted.");
                     });
                 } catch (Exception ex) {
                     logger.error("Delete period failed", ex);
-                    Platform.runLater(() -> alert(Alert.AlertType.ERROR, "Delete Failed", ex.getMessage()));
+                    Platform.runLater(() ->
+                            alert(Alert.AlertType.ERROR, "Delete Failed",
+                                    ex.getMessage()));
                 }
             }).start();
         });
     }
 
+    // ── Payroll processing ────────────────────────────────────────────────
 
     @FXML
     private void handleProcessPayroll() {
         if (selectedPeriod == null) {
-            alert(Alert.AlertType.WARNING, "No Period", "Please select a pay period first.");
+            alert(Alert.AlertType.WARNING, "No Period",
+                    "Please select a pay period first.");
             return;
         }
         if (selectedPeriod.isLocked()) {
-            alert(Alert.AlertType.WARNING, "Locked", "This pay period is finalized and locked.");
+            alert(Alert.AlertType.WARNING, "Locked",
+                    "This pay period is finalized and locked.");
             return;
         }
 
         Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
                 "Process payroll for: " + selectedPeriod.getPeriodName() + "?\n"
-              + "This will compute salaries for all active employees.",
+                        + "This will compute salaries for all active employees.",
                 ButtonType.OK, ButtonType.CANCEL);
         Optional<ButtonType> res = confirm.showAndWait();
         if (res.isEmpty() || res.get() != ButtonType.OK) return;
@@ -357,16 +366,19 @@ public class PayrollController {
 
                 for (Employee emp : employees) {
                     try {
-                        List<com.example.payroll_project.model.AttendanceRecord> attendance =
-                                attDAO.findByEmployeeAndPeriod(emp.getEmployeeId(),
+                        List<AttendanceRecord> attendance =
+                                attDAO.findByEmployeeAndPeriod(
+                                        emp.getEmployeeId(),
                                         selectedPeriod.getStartDate(),
                                         selectedPeriod.getEndDate());
 
-                        PayrollRecord pr = payrollSvc.compute(emp, selectedPeriod, attendance);
+                        PayrollRecord pr = payrollSvc.compute(
+                                emp, selectedPeriod, attendance);
 
                         Optional<PayrollRecord> existing =
                                 payrollDAO.findByPeriodAndEmployee(
-                                        selectedPeriod.getPayPeriodId(), emp.getEmployeeId());
+                                        selectedPeriod.getPayPeriodId(),
+                                        emp.getEmployeeId());
                         if (existing.isPresent()) {
                             pr.setPayrollId(existing.get().getPayrollId());
                             payrollDAO.update(pr);
@@ -374,24 +386,31 @@ public class PayrollController {
                             payrollDAO.create(pr);
                         }
                         computed.add(pr);
-
                     } catch (Exception ex) {
-                        logger.error("Failed to process payroll for employee {}: {}",
+                        logger.error("Failed to process payroll for {}: {}",
                                 emp.getEmployeeCode(), ex.getMessage());
                     }
                 }
 
+                // Refresh the employee cache so newly-added employees appear
+                List<Employee> allEmps = empDAO.findAll(false);
+                java.util.Map<Integer, Employee> freshMap = new java.util.HashMap<>();
+                for (Employee e : allEmps) freshMap.put(e.getEmployeeId(), e);
+
                 Platform.runLater(() -> {
+                    empCache = freshMap;
                     records.setAll(computed);
                     payrollTable.setItems(records);
                     updateSummaryStats(computed);
                     loadPayPeriods(false);
                     alert(Alert.AlertType.INFORMATION, "Done",
-                            "Payroll processed for " + computed.size() + " employee(s).");
+                            "Payroll processed for "
+                                    + computed.size() + " employee(s).");
                 });
             } catch (Exception ex) {
                 logger.error("Payroll processing failed", ex);
-                Platform.runLater(() -> alert(Alert.AlertType.ERROR, "Error", ex.getMessage()));
+                Platform.runLater(() ->
+                        alert(Alert.AlertType.ERROR, "Error", ex.getMessage()));
             }
         }).start();
     }
@@ -402,7 +421,6 @@ public class PayrollController {
             alert(Alert.AlertType.WARNING, "No Data", "Process payroll first.");
             return;
         }
-
         DirectoryChooser dc = new DirectoryChooser();
         dc.setTitle("Select Output Directory for Payslips");
         File dir = dc.showDialog(payrollTable.getScene().getWindow());
@@ -412,90 +430,145 @@ public class PayrollController {
             try {
                 List<Employee> employees = empDAO.findAll(true);
                 String outDir = dir.getAbsolutePath() + File.separator
-                              + "payslips_" + selectedPeriod.getPeriodName()
-                                              .replaceAll("[^A-Za-z0-9_]", "_");
-
+                        + "payslips_" + selectedPeriod.getPeriodName()
+                        .replaceAll("[^A-Za-z0-9_]", "_");
                 List<String> generated = payslipSvc.generateBatch(
                         employees, selectedPeriod, new ArrayList<>(records), outDir);
-
-                Platform.runLater(() -> alert(Alert.AlertType.INFORMATION, "Payslips Generated",
-                        generated.size() + " file(s) written to:\n" + outDir));
-
+                Platform.runLater(() ->
+                        alert(Alert.AlertType.INFORMATION, "Payslips Generated",
+                                generated.size() + " file(s) written to:\n" + outDir));
             } catch (Exception ex) {
                 logger.error("Payslip generation failed", ex);
-                Platform.runLater(() -> alert(Alert.AlertType.ERROR, "Error", ex.getMessage()));
+                Platform.runLater(() ->
+                        alert(Alert.AlertType.ERROR, "Error", ex.getMessage()));
             }
         }).start();
     }
-
 
     @FXML
     private void handleShowTransparency() {
-        PayrollRecord selected = payrollTable.getSelectionModel().getSelectedItem();
+        PayrollRecord selected =
+                payrollTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            transparencyTextArea.setText("Select a payroll row to see the computation breakdown.");
+            transparencyTextArea.setText(
+                    "Select a payroll row to see the computation breakdown.");
             return;
         }
-
         new Thread(() -> {
             try {
-                Optional<Employee> empOpt = empDAO.findById(selected.getEmployeeId());
+                Optional<Employee> empOpt =
+                        empDAO.findById(selected.getEmployeeId());
                 if (empOpt.isEmpty()) return;
-
                 Employee emp = empOpt.get();
-                List<com.example.payroll_project.model.AttendanceRecord> att =
+                List<AttendanceRecord> att =
                         attDAO.findByEmployeeAndPeriod(emp.getEmployeeId(),
-                                selectedPeriod.getStartDate(), selectedPeriod.getEndDate());
-
-                PayrollRecord fresh = payrollSvc.compute(emp, selectedPeriod, att);
+                                selectedPeriod.getStartDate(),
+                                selectedPeriod.getEndDate());
+                PayrollRecord fresh =
+                        payrollSvc.compute(emp, selectedPeriod, att);
                 String details = fresh.getComputationDetails() != null
                         ? fresh.getComputationDetails()
                         : "No details available.";
-
                 Platform.runLater(() -> transparencyTextArea.setText(details));
             } catch (Exception ex) {
-                Platform.runLater(() -> transparencyTextArea.setText("Error: " + ex.getMessage()));
+                Platform.runLater(() ->
+                        transparencyTextArea.setText("Error: " + ex.getMessage()));
             }
         }).start();
     }
 
+    // ── Payroll records loading ───────────────────────────────────────────
 
+    /**
+     * Loads payroll records for the given period.
+     * Also runs a raw COUNT query first so we can detect DAO-level mapping
+     * failures (DB has rows but DAO returns empty list).
+     */
     private void loadPayrollRecords(PayPeriod pp) {
         new Thread(() -> {
             try {
-                List<PayrollRecord> prs = payrollDAO.findByPayPeriod(pp.getPayPeriodId());
+                // Raw count — tells us whether the DB actually has records
+                int rawCount = 0;
+                try (Connection conn =
+                             DatabaseManager.getInstance().getConnection();
+                     PreparedStatement ps = conn.prepareStatement(
+                             "SELECT COUNT(*) FROM payroll_records "
+                                     + "WHERE pay_period_id = ?")) {
+                    ps.setInt(1, pp.getPayPeriodId());
+                    try (ResultSet rs = ps.executeQuery()) {
+                        if (rs.next()) rawCount = rs.getInt(1);
+                    }
+                }
+                logger.info("DB COUNT for pay_period_id={} → {} row(s)",
+                        pp.getPayPeriodId(), rawCount);
+
+                // Normal DAO load
+                List<PayrollRecord> prs =
+                        payrollDAO.findByPayPeriod(pp.getPayPeriodId());
+                logger.info("DAO returned {} record(s) for period '{}' (id={})",
+                        prs.size(), pp.getPeriodName(), pp.getPayPeriodId());
+
+                final int finalRawCount = rawCount;
                 Platform.runLater(() -> {
                     records.setAll(prs);
                     payrollTable.setItems(records);
                     updateSummaryStats(prs);
+
+                    // Warn if DB has rows but DAO returned nothing
+                    // (indicates a mapping/SQL error in PayrollDAO)
+                    if (finalRawCount > 0 && prs.isEmpty()) {
+                        alert(Alert.AlertType.WARNING, "Data Mismatch",
+                                "The database has " + finalRawCount
+                                        + " payroll record(s) for this period "
+                                        + "but none could be loaded.\n\n"
+                                        + "Check the IDE console / log for a "
+                                        + "SQL error in PayrollDAO.");
+                    }
                 });
             } catch (SQLException ex) {
-                logger.error("Load payroll records failed", ex);
+                logger.error("loadPayrollRecords failed (period id={}): {}",
+                        pp.getPayPeriodId(), ex.getMessage(), ex);
+                Platform.runLater(() ->
+                        alert(Alert.AlertType.ERROR, "Load Error",
+                                "Failed to load payroll records:\n"
+                                        + ex.getMessage()));
             }
         }).start();
     }
 
+    // ── Payroll table setup ───────────────────────────────────────────────
+
     private void setupPayrollTable() {
         colEmpCode.setCellValueFactory(c -> {
             Employee e = empCache.get(c.getValue().getEmployeeId());
-            return new SimpleStringProperty(e != null ? e.getEmployeeCode() : "—");
+            return new SimpleStringProperty(
+                    e != null ? e.getEmployeeCode()
+                              : "ID:" + c.getValue().getEmployeeId());
         });
         colEmpName.setCellValueFactory(c -> {
             Employee e = empCache.get(c.getValue().getEmployeeId());
-            return new SimpleStringProperty(e != null ? e.getFullName() : "Unknown");
+            return new SimpleStringProperty(
+                    e != null ? e.getFullName()
+                              : "Unknown (" + c.getValue().getEmployeeId() + ")");
         });
         colDaysWorked.setCellValueFactory(c ->
-                new SimpleStringProperty(String.valueOf(c.getValue().getDaysWorked())));
+                new SimpleStringProperty(
+                        String.valueOf(c.getValue().getDaysWorked())));
         colRegHours.setCellValueFactory(c ->
-                new SimpleStringProperty(fmt2(c.getValue().getTotalRegularHours())));
+                new SimpleStringProperty(
+                        fmt2(c.getValue().getTotalRegularHours())));
         colOtHours.setCellValueFactory(c ->
-                new SimpleStringProperty(fmt2(c.getValue().getTotalOvertimeHours())));
+                new SimpleStringProperty(
+                        fmt2(c.getValue().getTotalOvertimeHours())));
         colGrossPay.setCellValueFactory(c ->
-                new SimpleStringProperty(CURRENCY.format(c.getValue().getGrossPay())));
+                new SimpleStringProperty(
+                        CURRENCY.format(c.getValue().getGrossPay())));
         colDeductions.setCellValueFactory(c ->
-                new SimpleStringProperty(CURRENCY.format(c.getValue().getTotalDeductions())));
+                new SimpleStringProperty(
+                        CURRENCY.format(c.getValue().getTotalDeductions())));
         colNetPay.setCellValueFactory(c ->
-                new SimpleStringProperty(CURRENCY.format(c.getValue().getNetPay())));
+                new SimpleStringProperty(
+                        CURRENCY.format(c.getValue().getNetPay())));
 
         colPayrollActions.setCellFactory(col -> new TableCell<>() {
             private final Button viewBtn = new Button("Details");
@@ -514,33 +587,46 @@ public class PayrollController {
     }
 
     private void updateSummaryStats(List<PayrollRecord> prs) {
-        int empCount   = prs.size();
+        int empCount = prs.size();
         BigDecimal gross = prs.stream().map(PayrollRecord::getGrossPay)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
         BigDecimal net = prs.stream().map(PayrollRecord::getNetPay)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-
         totalEmployeesLabel.setText(String.valueOf(empCount));
         totalGrossLabel.setText(CURRENCY.format(gross));
         totalNetLabel.setText(CURRENCY.format(net));
     }
 
+    // ── Employee cache ────────────────────────────────────────────────────
+
+    /**
+     * Loads the employee lookup cache on a background thread.
+     * Pay periods are triggered from inside this callback so the cache is
+     * always populated before any payroll row tries to resolve an employee name.
+     */
     private void loadEmployeeCache() {
         new Thread(() -> {
             try {
                 List<Employee> employees = empDAO.findAll(false);
                 java.util.Map<Integer, Employee> map = new java.util.HashMap<>();
                 for (Employee e : employees) map.put(e.getEmployeeId(), e);
+                logger.info("Employee cache built: {} entries", map.size());
+
                 Platform.runLater(() -> {
                     empCache = map;
-                    payrollTable.refresh();
+                    loadPayPeriods(true);
+                    if (selectedPeriod != null) {
+                        loadPayrollRecords(selectedPeriod);
+                    }
                 });
             } catch (Exception ex) {
-                logger.error("Cache load failed", ex);
+                logger.error("Employee cache load failed", ex);
+                Platform.runLater(() -> loadPayPeriods(true));
             }
         }).start();
     }
 
+    // ── Helpers ───────────────────────────────────────────────────────────
 
     private String fmt2(BigDecimal bd) {
         return bd != null ? String.format("%.2f", bd) : "0.00";
