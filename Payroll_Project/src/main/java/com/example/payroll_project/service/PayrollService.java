@@ -24,6 +24,10 @@ import java.util.List;
  *  │  BIR withholding tax  →  computed on TAXABLE INCOME per period  │
  *  │    = gross pay − non-taxable allowances − statutory deductions  │
  *  │  Annualisation uses ×12 (monthly) or ×24 (semi-monthly).       │
+ *  │                                                                 │
+ *  │  FIX: If gross pay is ₱0.00 (no hours worked / no attendance), │
+ *  │  all deductions are ₱0.00. There is nothing to deduct from.    │
+ *  │  Statutory deductions are also capped so net pay ≥ ₱0.00.      │
  *  └─────────────────────────────────────────────────────────────────┘
  */
 public class PayrollService {
@@ -53,10 +57,6 @@ public class PayrollService {
         return PeriodType.MONTHLY;
     }
 
-    /**
-     * Divisor for statutory contributions based on period type.
-     * Monthly = 1 (full deduction), Semi-monthly = 2 (half), Weekly = 4.
-     */
     private BigDecimal contributionDivisor(PeriodType type) {
         return switch (type) {
             case WEEKLY       -> new BigDecimal("4");
@@ -88,8 +88,6 @@ public class PayrollService {
         pr.setTotalUndertimeMinutes(hours.totalUndertimeMinutes);
 
         // ── 2. Rate derivation ─────────────────────────────────────────────
-        // monthlyRate  → contribution base (basic salary only)
-        // hourlyRate   → pay computation base
         BigDecimal monthlyRate = toMonthlySalary(employee);
         BigDecimal dailyRate   = toDailyRate(employee);
         BigDecimal hourlyRate  = dailyRate.divide(new BigDecimal("8"), 4, RoundingMode.HALF_UP);
@@ -105,7 +103,6 @@ public class PayrollService {
                 .setScale(2, RoundingMode.HALF_UP);
         pr.setOvertimePay(otPay);
 
-        // Night differential: 10% extra on top of regular rate
         BigDecimal ndExtra = hours.totalNightDiffHours
                 .multiply(hourlyRate).multiply(new BigDecimal("0.10"))
                 .setScale(2, RoundingMode.HALF_UP);
@@ -121,39 +118,79 @@ public class PayrollService {
         pr.setGrossPay(grossPay);
 
         // ── 4. Statutory deductions ────────────────────────────────────────
-        // Based on MONTHLY BASIC SALARY — not on gross pay.
-        // Prorated by period type (semi-monthly → half, weekly → quarter).
+        // FIX: If the employee earned nothing this period, skip all deductions.
+        // There is no income to deduct from — applying deductions to ₱0 gross
+        // is both legally incorrect and produces nonsensical negative net pay.
         PeriodType periodType = detectPeriodType(payPeriod);
         BigDecimal divisor    = contributionDivisor(periodType);
 
-        BigDecimal sssContrib       = sss.calculateEmployeeContribution(monthlyRate)
-                                         .divide(divisor, 2, RoundingMode.HALF_UP);
-        BigDecimal philHealthContrib = philHealth.calculateEmployeeContribution(monthlyRate)
-                                                  .divide(divisor, 2, RoundingMode.HALF_UP);
-        BigDecimal pagIbigContrib   = pagIbig.calculateEmployeeContribution(monthlyRate)
-                                             .divide(divisor, 2, RoundingMode.HALF_UP);
+        BigDecimal sssContrib;
+        BigDecimal philHealthContrib;
+        BigDecimal pagIbigContrib;
+        BigDecimal withholdingTax;
+
+        if (grossPay.compareTo(BigDecimal.ZERO) <= 0) {
+            // No earnings → no deductions
+            sssContrib       = BigDecimal.ZERO;
+            philHealthContrib = BigDecimal.ZERO;
+            pagIbigContrib   = BigDecimal.ZERO;
+            withholdingTax   = BigDecimal.ZERO;
+        } else {
+            // Normal case: compute statutory deductions on monthly basic salary,
+            // prorated by period type
+            sssContrib = sss.calculateEmployeeContribution(monthlyRate)
+                            .divide(divisor, 2, RoundingMode.HALF_UP);
+            philHealthContrib = philHealth.calculateEmployeeContribution(monthlyRate)
+                                          .divide(divisor, 2, RoundingMode.HALF_UP);
+            pagIbigContrib = pagIbig.calculateEmployeeContribution(monthlyRate)
+                                    .divide(divisor, 2, RoundingMode.HALF_UP);
+
+            // ── 5. Withholding tax ─────────────────────────────────────────
+            // Taxable income = gross − non-taxable allowances − mandatory deductions
+            BigDecimal taxableIncome = grossPay
+                    .subtract(pr.getNonTaxableAllowances())
+                    .subtract(sssContrib)
+                    .subtract(philHealthContrib)
+                    .subtract(pagIbigContrib)
+                    .max(BigDecimal.ZERO);
+
+            withholdingTax = switch (periodType) {
+                case SEMI_MONTHLY -> bir.calculateSemiMonthlyTax(taxableIncome);
+                case WEEKLY       -> bir.calculateWeeklyTax(taxableIncome);
+                case MONTHLY      -> bir.calculateMonthlyTax(taxableIncome);
+            };
+
+            // Cap total deductions so they never exceed gross pay
+            // (e.g. employee worked only a few days in a monthly period)
+            BigDecimal totalStatutory = sssContrib
+                    .add(philHealthContrib)
+                    .add(pagIbigContrib)
+                    .add(withholdingTax)
+                    .add(pr.getTotalOtherDeductions());
+
+            if (totalStatutory.compareTo(grossPay) > 0) {
+                // Scale down proportionally so net pay = ₱0 rather than negative
+                BigDecimal scale = grossPay.divide(totalStatutory, 4, RoundingMode.HALF_UP);
+                sssContrib        = sssContrib.multiply(scale).setScale(2, RoundingMode.HALF_UP);
+                philHealthContrib = philHealthContrib.multiply(scale).setScale(2, RoundingMode.HALF_UP);
+                pagIbigContrib    = pagIbigContrib.multiply(scale).setScale(2, RoundingMode.HALF_UP);
+                withholdingTax    = withholdingTax.multiply(scale).setScale(2, RoundingMode.HALF_UP);
+            }
+        }
 
         pr.setSssContribution         (sssContrib);
         pr.setPhilhealthContribution  (philHealthContrib);
         pr.setPagibigContribution     (pagIbigContrib);
+        pr.setWithholdingTax          (withholdingTax);
 
-        // ── 5. Withholding tax ─────────────────────────────────────────────
-        // Taxable income = gross − non-taxable allowances − mandatory deductions.
-        BigDecimal taxableIncome = grossPay
+        // ── 6. Net pay ─────────────────────────────────────────────────────
+        BigDecimal taxableIncomeFinal = grossPay
                 .subtract(pr.getNonTaxableAllowances())
                 .subtract(sssContrib)
                 .subtract(philHealthContrib)
                 .subtract(pagIbigContrib)
                 .max(BigDecimal.ZERO);
 
-        BigDecimal withholdingTax = switch (periodType) {
-            case SEMI_MONTHLY -> bir.calculateSemiMonthlyTax(taxableIncome);
-            case WEEKLY       -> bir.calculateWeeklyTax(taxableIncome);
-            case MONTHLY      -> bir.calculateMonthlyTax(taxableIncome);
-        };
-        pr.setWithholdingTax(withholdingTax);
-
-        // ── 6. Net pay ─────────────────────────────────────────────────────
         BigDecimal totalDeductions = sssContrib
                 .add(philHealthContrib)
                 .add(pagIbigContrib)
@@ -163,7 +200,8 @@ public class PayrollService {
         pr.setNetPay(grossPay.subtract(totalDeductions).max(BigDecimal.ZERO));
 
         pr.setComputationDetails(buildTransparencyDetails(
-                employee, hourlyRate, hours, pr, taxableIncome, monthlyRate, periodType, divisor));
+                employee, hourlyRate, hours, pr, taxableIncomeFinal,
+                monthlyRate, periodType, divisor, grossPay));
 
         logger.info("Payroll [{}] computed for {}: period={}, gross={}, deductions={}, net={}",
                 periodType, employee.getEmployeeCode(),
@@ -205,13 +243,20 @@ public class PayrollService {
             BigDecimal taxableIncome,
             BigDecimal monthlyRate,
             PeriodType periodType,
-            BigDecimal divisor) {
+            BigDecimal divisor,
+            BigDecimal grossPay) {
 
         String periodLabel = switch (periodType) {
             case MONTHLY      -> "Monthly";
             case SEMI_MONTHLY -> "Semi-Monthly (contributions ÷ 2)";
             case WEEKLY       -> "Weekly (contributions ÷ 4)";
         };
+
+        String deductionNote = grossPay.compareTo(BigDecimal.ZERO) <= 0
+                ? "\n⚠️  No earnings this period — all deductions set to ₱0.00\n"
+                : String.format(
+                    "\nNOTE: Monthly contributions are prorated by period type (÷%s)\n",
+                    divisor.toPlainString());
 
         return "=== Payroll Computation Breakdown ===\n"
              + String.format("Employee       : %s - %s\n", emp.getEmployeeCode(), emp.getFullName())
@@ -227,9 +272,9 @@ public class PayrollService {
              + String.format("Holiday Hours  : %s hrs × ₱%,.4f × 2.00 = ₱%,.2f\n",
                    hours.totalHolidayHours, hourlyRate, pr.getHolidayPay())
              + String.format("Gross Pay      : ₱%,.2f\n", pr.getGrossPay())
-             + "\n--- Statutory Deductions (based on Monthly Basic Salary ₱"
-                   + String.format("%,.2f", monthlyRate) + ") ---\n"
-             + "NOTE: Monthly contributions are prorated by period type (÷" + divisor.toPlainString() + ")\n"
+             + String.format("\n--- Statutory Deductions (based on Monthly Basic Salary ₱%,.2f) ---\n",
+                   monthlyRate)
+             + deductionNote
              + sss.getComputationDetails(monthlyRate) + " ÷" + divisor.toPlainString()
                    + " = ₱" + String.format("%,.2f", pr.getSssContribution()) + "\n"
              + philHealth.getComputationDetails(monthlyRate) + " ÷" + divisor.toPlainString()
