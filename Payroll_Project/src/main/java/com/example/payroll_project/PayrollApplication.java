@@ -13,7 +13,7 @@ import java.io.IOException;
 
 /**
  * Main JavaFX Application
- * KC-02N Biometric Scanner-based Automated Payroll System
+ * KC-02N Biometric Scanner-based Automated Payroll Systemf
  */
 public class PayrollApplication extends Application {
     
